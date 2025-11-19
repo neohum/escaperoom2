@@ -13,12 +13,13 @@ const JWT_EXPIRES_IN = '7d';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // Register
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password, username, provider = 'local' } = req.body;
 
     if (!email || !password || !username) {
-      return res.status(400).json({ error: 'Email, password, and username are required' });
+      res.status(400).json({ error: 'Email, password, and username are required' });
+      return;
     }
 
     const db = getDB();
@@ -30,7 +31,8 @@ router.post('/register', async (req: Request, res: Response) => {
     );
 
     if (Array.isArray(existingUsers) && existingUsers.length > 0) {
-      return res.status(409).json({ error: 'User already exists' });
+      res.status(409).json({ error: 'User already exists' });
+      return;
     }
 
     // Hash password
@@ -58,12 +60,13 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 // Login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      res.status(400).json({ error: 'Email and password are required' });
+      return;
     }
 
     const db = getDB();
@@ -75,20 +78,23 @@ router.post('/login', async (req: Request, res: Response) => {
     );
 
     if (!Array.isArray(users) || users.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
     }
 
     const user = users[0] as any;
 
     // Check if local provider
     if (user.provider !== 'local') {
-      return res.status(400).json({ error: `Please login with ${user.provider}` });
+      res.status(400).json({ error: `Please login with ${user.provider}` });
+      return;
     }
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
     }
 
     // Generate JWT
@@ -111,12 +117,13 @@ router.post('/logout', (_req: Request, res: Response) => {
 });
 
 // Get current user
-router.get('/me', async (req: Request, res: Response) => {
+router.get('/me', async (req: Request, res: Response): Promise<void> => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+      res.status(401).json({ error: 'No token provided' });
+      return;
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as any;
@@ -128,7 +135,8 @@ router.get('/me', async (req: Request, res: Response) => {
     );
 
     if (!Array.isArray(users) || users.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     res.json({ user: users[0] });
@@ -206,13 +214,14 @@ router.get('/kakao/callback',
 );
 
 // Naver OAuth (Manual implementation - no official passport strategy)
-router.get('/naver', (req: Request, res: Response) => {
+router.get('/naver', (_req: Request, res: Response): void => {
   const clientId = process.env.NAVER_CLIENT_ID;
   const callbackUrl = encodeURIComponent(`${process.env.BACKEND_URL || 'http://localhost:4000'}/api/auth/naver/callback`);
   const state = Math.random().toString(36).substring(7);
 
   if (!clientId) {
-    return res.redirect(`${FRONTEND_URL}/login?error=naver_not_configured`);
+    res.redirect(`${FRONTEND_URL}/login?error=naver_not_configured`);
+    return;
   }
 
   const naverAuthUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&redirect_uri=${callbackUrl}&state=${state}`;
@@ -242,10 +251,11 @@ router.get('/naver/callback', async (req: Request, res: Response) => {
       }),
     });
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = await tokenResponse.json() as any;
 
     if (!tokenData.access_token) {
-      return res.redirect(`${FRONTEND_URL}/login?error=naver`);
+      res.redirect(`${FRONTEND_URL}/login?error=naver`);
+      return;
     }
 
     // Get user profile
@@ -253,10 +263,11 @@ router.get('/naver/callback', async (req: Request, res: Response) => {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
 
-    const profileData = await profileResponse.json();
+    const profileData = await profileResponse.json() as any;
 
     if (profileData.resultcode !== '00') {
-      return res.redirect(`${FRONTEND_URL}/login?error=naver`);
+      res.redirect(`${FRONTEND_URL}/login?error=naver`);
+      return;
     }
 
     const profile = profileData.response;
@@ -264,7 +275,8 @@ router.get('/naver/callback', async (req: Request, res: Response) => {
     const nickname = profile.nickname || profile.name;
 
     if (!email) {
-      return res.redirect(`${FRONTEND_URL}/login?error=naver_no_email`);
+      res.redirect(`${FRONTEND_URL}/login?error=naver_no_email`);
+      return;
     }
 
     const db = getDB();
