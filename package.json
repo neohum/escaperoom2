@@ -1,0 +1,47 @@
+{
+  "name": "escaperoom-edu-platform",
+  "version": "1.0.0",
+  "description": "교육용 방탈출 게임 제작 및 플레이 플랫폼",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "build": "npm run build --workspaces",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:backend": "npm run build --workspace=backend",
+    "install:all": "npm install && npm install --workspaces",
+    "clean": "rm -rf node_modules frontend/node_modules backend/node_modules shared/node_modules",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "keywords": [
+    "education",
+    "escape-room",
+    "game",
+    "learning",
+    "nextjs",
+    "express",
+    "mysql",
+    "redis"
+  ],
+  "author": "Your Name",
+  "license": "CC-BY-NC-ND-4.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/escaperoom.git"
+  }
+}
+

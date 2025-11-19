@@ -1,0 +1,14 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "description": "Shared types and constants",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "lint": "echo 'No lint configured for shared'"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
+
