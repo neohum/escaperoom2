@@ -1,0 +1,156 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+
+interface Room {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: number;
+  estimated_time: number;
+  thumbnail_url: string;
+  creator_name: string;
+  question_count: number;
+}
+
+export default function RoomsPage() {
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  const fetchRooms = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/rooms`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch rooms');
+      }
+
+      setRooms(data.rooms);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDifficultyLabel = (difficulty: number) => {
+    if (difficulty <= 2) return '쉬움';
+    if (difficulty <= 4) return '보통';
+    return '어려움';
+  };
+
+  const getDifficultyColor = (difficulty: number) => {
+    if (difficulty <= 2) return 'text-green-600 bg-green-100';
+    if (difficulty <= 4) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <Link href="/" className="text-2xl font-bold text-indigo-600">
+              🎯 방탈출 교육 플랫폼
+            </Link>
+            <div className="flex gap-4">
+              <Link
+                href="/create"
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+              >
+                게임 만들기
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <h1 className="text-4xl font-bold text-gray-900 mb-8">게임 목록</h1>
+
+        {loading && (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            <p className="mt-4 text-gray-600">로딩 중...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && rooms.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-600 text-lg">아직 게임이 없습니다.</p>
+            <Link
+              href="/create"
+              className="inline-block mt-4 bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700"
+            >
+              첫 게임 만들기
+            </Link>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {rooms.map((room) => (
+            <Link
+              key={room.id}
+              href={`/rooms/${room.id}`}
+              className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow overflow-hidden"
+            >
+              <div className="h-48 bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
+                {room.thumbnail_url ? (
+                  <img
+                    src={room.thumbnail_url}
+                    alt={room.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-6xl">🎮</span>
+                )}
+              </div>
+
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{room.title}</h3>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  {room.description || '설명이 없습니다.'}
+                </p>
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {room.category && (
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                      {room.category}
+                    </span>
+                  )}
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs ${getDifficultyColor(
+                      room.difficulty
+                    )}`}
+                  >
+                    {getDifficultyLabel(room.difficulty)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>⏱️ {room.estimated_time}분</span>
+                  <span>📝 {room.question_count}문제</span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
