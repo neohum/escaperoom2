@@ -7,11 +7,11 @@ const router = Router();
 // POST /api/upload/file - Upload general file
 // DELETE /api/upload/:filename - Delete uploaded file
 
-router.post('/image', (req, res) => {
+router.post('/image', (_req, res) => {
   res.json({ message: 'Upload image - TODO' });
 });
 
-router.post('/file', (req, res) => {
+router.post('/file', (_req, res) => {
   res.json({ message: 'Upload file - TODO' });
 });
 

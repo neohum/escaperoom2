@@ -41,7 +41,7 @@ router.get('/room/:roomId', optionalAuth, async (req: Request, res: Response) =>
 });
 
 // Get question by ID
-router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:id', optionalAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const db = getDB();
@@ -52,7 +52,8 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
     );
 
     if (!Array.isArray(questions) || questions.length === 0) {
-      return res.status(404).json({ error: 'Question not found' });
+      res.status(404).json({ error: 'Question not found' });
+      return;
     }
 
     res.json({ question: questions[0] });
@@ -63,7 +64,7 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
 });
 
 // Create new question
-router.post('/', verifyToken, async (req: Request, res: Response) => {
+router.post('/', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as AuthRequest).userId;
     const {
@@ -82,7 +83,8 @@ router.post('/', verifyToken, async (req: Request, res: Response) => {
     } = req.body;
 
     if (!room_id || !type || !title) {
-      return res.status(400).json({ error: 'room_id, type, and title are required' });
+      res.status(400).json({ error: 'room_id, type, and title are required' });
+      return;
     }
 
     const db = getDB();
@@ -94,12 +96,14 @@ router.post('/', verifyToken, async (req: Request, res: Response) => {
     );
 
     if (!Array.isArray(rooms) || rooms.length === 0) {
-      return res.status(404).json({ error: 'Room not found' });
+      res.status(404).json({ error: 'Room not found' });
+      return;
     }
 
     const room = rooms[0] as any;
     if (room.creator_id !== userId) {
-      return res.status(403).json({ error: 'Permission denied' });
+      res.status(403).json({ error: 'Permission denied' });
+      return;
     }
 
     const questionId = uuidv4();
@@ -126,7 +130,7 @@ router.post('/', verifyToken, async (req: Request, res: Response) => {
 });
 
 // Update question
-router.put('/:id', verifyToken, async (req: Request, res: Response) => {
+router.put('/:id', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as AuthRequest).userId;
     const { id } = req.params;
@@ -141,12 +145,14 @@ router.put('/:id', verifyToken, async (req: Request, res: Response) => {
     `, [id]);
 
     if (!Array.isArray(questions) || questions.length === 0) {
-      return res.status(404).json({ error: 'Question not found' });
+      res.status(404).json({ error: 'Question not found' });
+      return;
     }
 
     const question = questions[0] as any;
     if (question.creator_id !== userId) {
-      return res.status(403).json({ error: 'Permission denied' });
+      res.status(403).json({ error: 'Permission denied' });
+      return;
     }
 
     // Update question
@@ -185,7 +191,7 @@ router.put('/:id', verifyToken, async (req: Request, res: Response) => {
 });
 
 // Delete question
-router.delete('/:id', verifyToken, async (req: Request, res: Response) => {
+router.delete('/:id', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as AuthRequest).userId;
     const { id } = req.params;
@@ -200,12 +206,14 @@ router.delete('/:id', verifyToken, async (req: Request, res: Response) => {
     `, [id]);
 
     if (!Array.isArray(questions) || questions.length === 0) {
-      return res.status(404).json({ error: 'Question not found' });
+      res.status(404).json({ error: 'Question not found' });
+      return;
     }
 
     const question = questions[0] as any;
     if (question.creator_id !== userId) {
-      return res.status(403).json({ error: 'Permission denied' });
+      res.status(403).json({ error: 'Permission denied' });
+      return;
     }
 
     await db.query('DELETE FROM questions WHERE id = ?', [id]);
@@ -218,13 +226,14 @@ router.delete('/:id', verifyToken, async (req: Request, res: Response) => {
 });
 
 // Check answer
-router.post('/:id/check-answer', async (req: Request, res: Response) => {
+router.post('/:id/check-answer', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { answer } = req.body;
 
     if (!answer) {
-      return res.status(400).json({ error: 'Answer is required' });
+      res.status(400).json({ error: 'Answer is required' });
+      return;
     }
 
     const db = getDB();
@@ -235,7 +244,8 @@ router.post('/:id/check-answer', async (req: Request, res: Response) => {
     );
 
     if (!Array.isArray(questions) || questions.length === 0) {
-      return res.status(404).json({ error: 'Question not found' });
+      res.status(404).json({ error: 'Question not found' });
+      return;
     }
 
     const question = questions[0] as any;

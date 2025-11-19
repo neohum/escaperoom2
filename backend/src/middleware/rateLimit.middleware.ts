@@ -5,7 +5,7 @@ export async function rateLimiter(
   req: Request,
   res: Response,
   next: NextFunction
-) {
+): Promise<void> {
   try {
     const redis = getRedis();
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
@@ -22,10 +22,11 @@ export async function rateLimiter(
 
     if (requests > limit) {
       const ttl = await redis.ttl(key);
-      return res.status(429).json({
+      res.status(429).json({
         error: 'Too many requests',
         retryAfter: ttl,
       });
+      return;
     }
 
     // Add rate limit headers

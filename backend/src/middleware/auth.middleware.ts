@@ -8,11 +8,12 @@ export interface AuthRequest extends Request {
   userEmail?: string;
 }
 
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+export const verifyToken = (req: Request, res: Response, next: NextFunction): void => {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  
+
   if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
+    res.status(401).json({ error: 'No token provided' });
+    return;
   }
 
   try {
@@ -21,7 +22,7 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     (req as AuthRequest).userEmail = decoded.email;
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ error: 'Invalid token' });
   }
 };
 

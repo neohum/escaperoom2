@@ -15,25 +15,26 @@ export class AppError extends Error {
 
 export function errorHandler(
   err: Error | AppError,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction
-) {
+  _next: NextFunction
+): void {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+    res.status(err.statusCode).json({
       error: err.message,
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     });
+    return;
   }
 
   // Unexpected errors
   console.error('Unexpected error:', err);
-  
-  return res.status(500).json({
+
+  res.status(500).json({
     error: 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { 
+    ...(process.env.NODE_ENV === 'development' && {
       message: err.message,
-      stack: err.stack 
+      stack: err.stack
     }),
   });
 }

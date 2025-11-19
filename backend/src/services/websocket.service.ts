@@ -22,7 +22,7 @@ export function setupWebSocket(wss: WebSocketServer) {
   });
 
   // Handle Redis messages
-  subscriber.on('pmessage', (pattern, channel, message) => {
+  subscriber.on('pmessage', (_pattern, channel, message) => {
     // Broadcast to all clients in the room
     const roomId = channel.split(':')[1];
     
