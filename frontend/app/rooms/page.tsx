@@ -19,9 +19,11 @@ export default function RoomsPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isDev, setIsDev] = useState(false);
 
   useEffect(() => {
     fetchRooms();
+    setIsDev(process.env.NODE_ENV === 'development');
   }, []);
 
   const fetchRooms = async () => {
@@ -58,9 +60,19 @@ export default function RoomsPage() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <Link href="/" className="text-2xl font-bold text-indigo-600">
-              🎯 방탈출 교육 플랫폼
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link href="/" className="text-2xl font-bold text-indigo-600">
+                🎯 방탈출 교육 플랫폼
+              </Link>
+              {isDev && (
+                <Link
+                  href="/colors"
+                  className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full hover:bg-yellow-200"
+                >
+                  🎨 컬러셋
+                </Link>
+              )}
+            </div>
             <div className="flex gap-4">
               <Link
                 href="/create"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -15,6 +15,11 @@ export default function CreateRoomPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isDev, setIsDev] = useState(false);
+
+  useEffect(() => {
+    setIsDev(process.env.NODE_ENV === 'development');
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -68,9 +73,19 @@ export default function CreateRoomPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link href="/" className="text-2xl font-bold text-indigo-600">
-            🎯 방탈출 교육 플랫폼
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-2xl font-bold text-indigo-600">
+              🎯 방탈출 교육 플랫폼
+            </Link>
+            {isDev && (
+              <Link
+                href="/colors"
+                className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full hover:bg-yellow-200"
+              >
+                🎨 컬러셋
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 

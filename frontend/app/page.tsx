@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
+  const [isDev, setIsDev] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
@@ -12,6 +13,9 @@ export default function Home() {
     if (userData) {
       setUser(JSON.parse(userData));
     }
+
+    // Check if in development mode
+    setIsDev(process.env.NODE_ENV === 'development');
   }, []);
 
   const handleLogout = () => {
@@ -26,9 +30,19 @@ export default function Home() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <Link href="/" className="text-2xl font-bold text-indigo-600">
-              🎯 방탈출 교육 플랫폼
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link href="/" className="text-2xl font-bold text-indigo-600">
+                🎯 방탈출 교육 플랫폼
+              </Link>
+              {isDev && (
+                <Link
+                  href="/colors"
+                  className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full hover:bg-yellow-200"
+                >
+                  🎨 컬러셋
+                </Link>
+              )}
+            </div>
             <nav className="flex gap-6 items-center">
               <Link href="/rooms" className="text-gray-700 hover:text-indigo-600 font-medium">
                 게임 목록
