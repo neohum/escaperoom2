@@ -49,6 +49,7 @@
     "@types/node": "^20.10.6",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.17",
+    "@types/passport-kakao": "^1.0.3",
     "@types/pdfkit": "^0.13.4",
     "@types/qrcode": "^1.5.5",
     "@types/ws": "^8.5.10",

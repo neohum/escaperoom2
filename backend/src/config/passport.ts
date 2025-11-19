@@ -13,11 +13,11 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         callbackURL: `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/auth/google/callback`,
       },
-      async (accessToken, refreshToken, profile, done) => {
+      async (_accessToken, _refreshToken, profile, done) => {
         try {
-          const db = await getDB();
+          const db = getDB();
           const email = profile.emails?.[0]?.value;
-          
+
           if (!email) {
             return done(new Error('No email found in Google profile'));
           }
@@ -34,9 +34,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             // Create new user
             const userId = uuidv4();
             const username = profile.displayName || email.split('@')[0];
-            
+
             await db.query(
-              `INSERT INTO users (id, email, username, oauth_provider, oauth_id, role, created_at) 
+              `INSERT INTO users (id, email, username, oauth_provider, oauth_id, role, created_at)
                VALUES (?, ?, ?, ?, ?, ?, NOW())`,
               [userId, email, username, 'google', profile.id, 'creator']
             );
@@ -76,9 +76,9 @@ if (process.env.KAKAO_CLIENT_ID) {
         clientID: process.env.KAKAO_CLIENT_ID,
         callbackURL: `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/auth/kakao/callback`,
       },
-      async (accessToken, refreshToken, profile, done) => {
+      async (_accessToken: any, _refreshToken: any, profile: any, done: any) => {
         try {
-          const db = await getDB();
+          const db = getDB();
           const email = profile._json?.kakao_account?.email;
           const nickname = profile.displayName || profile._json?.properties?.nickname;
 
@@ -98,9 +98,9 @@ if (process.env.KAKAO_CLIENT_ID) {
             // Create new user
             const userId = uuidv4();
             const username = nickname || email.split('@')[0];
-            
+
             await db.query(
-              `INSERT INTO users (id, email, username, oauth_provider, oauth_id, role, created_at) 
+              `INSERT INTO users (id, email, username, oauth_provider, oauth_id, role, created_at)
                VALUES (?, ?, ?, ?, ?, ?, NOW())`,
               [userId, email, username, 'kakao', profile.id, 'creator']
             );
@@ -140,7 +140,7 @@ passport.serializeUser((user: any, done) => {
 // Deserialize user
 passport.deserializeUser(async (id: string, done) => {
   try {
-    const db = await getDB();
+    const db = getDB();
     const [users] = await db.query<any[]>('SELECT * FROM users WHERE id = ?', [id]);
     done(null, users[0]);
   } catch (error) {
