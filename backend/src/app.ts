@@ -73,9 +73,6 @@ app.use((_req: Request, res: Response) => {
 // Error handler
 app.use(errorHandler);
 
-// Setup WebSocket
-setupWebSocket(wss);
-
 // Start server
 async function startServer() {
   try {
@@ -86,6 +83,10 @@ async function startServer() {
     // Connect to Redis
     await connectRedis();
     console.log('✅ Redis connected');
+
+    // Setup WebSocket (after Redis is connected)
+    setupWebSocket(wss);
+    console.log('✅ WebSocket setup complete');
 
     // Start listening
     server.listen(PORT, () => {
