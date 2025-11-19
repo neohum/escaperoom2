@@ -8,6 +8,13 @@
 [![Redis](https://img.shields.io/badge/Redis-Latest-red)](https://redis.io/)
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--ND-lightgrey)](LICENSE)
 
+## 🚀 최신 업데이트 (2025-11-19)
+
+- ✅ **소셜 로그인 구현** - Google, Kakao, Naver OAuth 지원
+- ✅ **MySQL 초기 설정** - 자동화 스크립트 제공
+- ✅ **컬러셋 미리보기** - 8가지 테마 선택 가능
+- ✅ **개발 문서 완비** - OAuth 설정 가이드, 구현 가이드
+
 ## 🎯 주요 기능
 
 ### 관리자/제작자
@@ -84,48 +91,47 @@ escaperoom/
 - MySQL 8.0+
 - Redis (또는 Upstash 계정)
 
-### 설치
+### 빠른 시작 (Quick Start)
 
 ```bash
-# 저장소 클론
+# 1. 저장소 클론
 git clone https://github.com/neohum/escaperoom2.git
 cd escaperoom
 
-# 모든 의존성 설치
-npm install
+# 2. MySQL 초기 설정 (비밀번호 재설정 + 데이터베이스 생성)
+./reset-mysql-password.sh  # MySQL root 비밀번호를 'root'로 설정
+./setup-db.sh               # 데이터베이스 및 스키마 생성
 
-# Backend 환경 변수 설정
-cp backend/.env.example backend/.env
-# backend/.env 파일을 편집하여 MySQL, Redis 정보 입력
+# 3. 패키지 설치
+npm install                 # 루트 의존성
+cd backend && npm install   # 백엔드 의존성
+cd ../frontend && npm install  # 프론트엔드 의존성
+cd ..
 
-# Frontend 환경 변수 설정
-cp frontend/.env.example frontend/.env.local
-# frontend/.env.local 파일을 편집
+# 4. 환경 변수 설정 (이미 설정되어 있음)
+# backend/.env - MySQL 비밀번호가 자동으로 'root'로 설정됨
+# OAuth 설정은 docs/OAUTH_SETUP.md 참조
 
-# 데이터베이스 마이그레이션
-mysql -u root -p < backend/migrations/001_initial_schema.sql
-
-# 개발 서버 실행 (Frontend + Backend 동시)
-npm run dev
+# 5. 개발 서버 실행
+cd backend && npm run dev   # 터미널 1: 백엔드 서버 (Port 4000)
+cd frontend && npm run dev  # 터미널 2: 프론트엔드 서버 (Port 3000)
 ```
 
-### 개별 실행
+### 접속 URL
 
-```bash
-# Frontend만 실행
-npm run dev:frontend
-
-# Backend만 실행
-npm run dev:backend
-```
-
-- Frontend: [http://localhost:3000](http://localhost:3000)
-- Backend API: [http://localhost:4000](http://localhost:4000)
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Backend API**: [http://localhost:4000](http://localhost:4000)
+- **컬러셋 미리보기**: [http://localhost:3000/color-preview](http://localhost:3000/color-preview)
 
 ---
 
 ## 📚 문서
 
+### 설정 가이드
+- **[OAuth 설정 가이드](./docs/OAUTH_SETUP.md)** - Google, Kakao, Naver 소셜 로그인 설정
+- **[구현 가이드](./IMPLEMENTATION_GUIDE.md)** - 현재 개발 상황 및 다음 단계
+
+### 프로젝트 문서
 - [프로젝트 기획서](./docs/project-proposal.md) - 전체 기획 및 요구사항
 - [프로젝트 구조](./docs/project-structure.md) - 폴더 구조 및 아키텍처
 - [기술 스택 상세](./docs/tech-stack.md) - 사용 기술 상세 설명
