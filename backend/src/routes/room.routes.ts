@@ -6,7 +6,7 @@ import { verifyToken, optionalAuth, AuthRequest } from '../middleware/auth.middl
 const router = Router();
 
 // Get all published rooms
-router.get('/', optionalAuth, async (req: Request, res: Response) => {
+router.get('/', optionalAuth, async (_req: Request, res: Response): Promise<void> => {
   try {
     const db = getDB();
     const [rooms] = await db.query(`
@@ -29,7 +29,7 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
 });
 
 // Get room by ID
-router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
+router.get('/:id', optionalAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const db = getDB();
@@ -42,7 +42,8 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
     `, [id]);
 
     if (!Array.isArray(rooms) || rooms.length === 0) {
-      return res.status(404).json({ error: 'Room not found' });
+      res.status(404).json({ error: 'Room not found' });
+      return;
     }
 
     const room = rooms[0] as any;
@@ -65,7 +66,7 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
 });
 
 // Create new room
-router.post('/', verifyToken, async (req: Request, res: Response) => {
+router.post('/', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as AuthRequest).userId;
     const {
@@ -81,7 +82,8 @@ router.post('/', verifyToken, async (req: Request, res: Response) => {
     } = req.body;
 
     if (!title) {
-      return res.status(400).json({ error: 'Title is required' });
+      res.status(400).json({ error: 'Title is required' });
+      return;
     }
 
     const db = getDB();
@@ -116,7 +118,7 @@ router.post('/', verifyToken, async (req: Request, res: Response) => {
 });
 
 // Update room
-router.put('/:id', verifyToken, async (req: Request, res: Response) => {
+router.put('/:id', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as AuthRequest).userId;
     const { id } = req.params;
@@ -129,12 +131,14 @@ router.put('/:id', verifyToken, async (req: Request, res: Response) => {
     );
 
     if (!Array.isArray(rooms) || rooms.length === 0) {
-      return res.status(404).json({ error: 'Room not found' });
+      res.status(404).json({ error: 'Room not found' });
+      return;
     }
 
     const room = rooms[0] as any;
     if (room.creator_id !== userId) {
-      return res.status(403).json({ error: 'Permission denied' });
+      res.status(403).json({ error: 'Permission denied' });
+      return;
     }
 
     // Update room
@@ -174,7 +178,7 @@ router.put('/:id', verifyToken, async (req: Request, res: Response) => {
 });
 
 // Delete room
-router.delete('/:id', verifyToken, async (req: Request, res: Response) => {
+router.delete('/:id', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as AuthRequest).userId;
     const { id } = req.params;
@@ -187,12 +191,14 @@ router.delete('/:id', verifyToken, async (req: Request, res: Response) => {
     );
 
     if (!Array.isArray(rooms) || rooms.length === 0) {
-      return res.status(404).json({ error: 'Room not found' });
+      res.status(404).json({ error: 'Room not found' });
+      return;
     }
 
     const room = rooms[0] as any;
     if (room.creator_id !== userId) {
-      return res.status(403).json({ error: 'Permission denied' });
+      res.status(403).json({ error: 'Permission denied' });
+      return;
     }
 
     // Delete room (cascade will handle related records)
@@ -206,7 +212,7 @@ router.delete('/:id', verifyToken, async (req: Request, res: Response) => {
 });
 
 // Publish room
-router.post('/:id/publish', verifyToken, async (req: Request, res: Response) => {
+router.post('/:id/publish', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as AuthRequest).userId;
     const { id } = req.params;
@@ -218,12 +224,14 @@ router.post('/:id/publish', verifyToken, async (req: Request, res: Response) => 
     );
 
     if (!Array.isArray(rooms) || rooms.length === 0) {
-      return res.status(404).json({ error: 'Room not found' });
+      res.status(404).json({ error: 'Room not found' });
+      return;
     }
 
     const room = rooms[0] as any;
     if (room.creator_id !== userId) {
-      return res.status(403).json({ error: 'Permission denied' });
+      res.status(403).json({ error: 'Permission denied' });
+      return;
     }
 
     await db.query(
@@ -239,7 +247,7 @@ router.post('/:id/publish', verifyToken, async (req: Request, res: Response) => 
 });
 
 // Unpublish room
-router.post('/:id/unpublish', verifyToken, async (req: Request, res: Response) => {
+router.post('/:id/unpublish', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as AuthRequest).userId;
     const { id } = req.params;
@@ -251,12 +259,14 @@ router.post('/:id/unpublish', verifyToken, async (req: Request, res: Response) =
     );
 
     if (!Array.isArray(rooms) || rooms.length === 0) {
-      return res.status(404).json({ error: 'Room not found' });
+      res.status(404).json({ error: 'Room not found' });
+      return;
     }
 
     const room = rooms[0] as any;
     if (room.creator_id !== userId) {
-      return res.status(403).json({ error: 'Permission denied' });
+      res.status(403).json({ error: 'Permission denied' });
+      return;
     }
 
     await db.query(
