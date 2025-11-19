@@ -6,7 +6,7 @@ export default function ColorsPage() {
   const colorSets = [
     {
       name: '현재 사용 중 (Indigo & Purple)',
-      description: '신뢰감 & 창의성',
+      description: '신뢰감 & 창의성 - 전문적이고 안정적인 느낌',
       primary: {
         50: '#eef2ff',
         100: '#e0e7ff',
@@ -27,7 +27,7 @@ export default function ColorsPage() {
     },
     {
       name: 'Teal & Orange (추천!)',
-      description: '활기차고 친근한 느낌',
+      description: '활기차고 친근한 느낌 - 차별화된 교육 플랫폼',
       primary: {
         50: '#f0fdfa',
         100: '#ccfbf1',
@@ -49,7 +49,7 @@ export default function ColorsPage() {
     },
     {
       name: 'Blue & Green',
-      description: '교육적이고 신선한 느낌',
+      description: '교육적이고 신선한 느낌 - 성장과 학습',
       primary: {
         50: '#eff6ff',
         100: '#dbeafe',
@@ -68,6 +68,116 @@ export default function ColorsPage() {
         600: '#16a34a',
       },
       gradient: 'from-blue-500 to-green-600',
+    },
+    {
+      name: 'Rose & Pink',
+      description: '따뜻하고 부드러운 느낌 - 친근하고 감성적',
+      primary: {
+        50: '#fff1f2',
+        100: '#ffe4e6',
+        200: '#fecdd3',
+        300: '#fda4af',
+        400: '#fb7185',
+        500: '#f43f5e',
+        600: '#e11d48',
+        700: '#be123c',
+        800: '#9f1239',
+        900: '#881337',
+      },
+      secondary: {
+        400: '#f472b6',
+        500: '#ec4899',
+        600: '#db2777',
+      },
+      gradient: 'from-rose-500 to-pink-600',
+    },
+    {
+      name: 'Violet & Fuchsia',
+      description: '창의적이고 혁신적인 느낌 - 미래지향적',
+      primary: {
+        50: '#f5f3ff',
+        100: '#ede9fe',
+        200: '#ddd6fe',
+        300: '#c4b5fd',
+        400: '#a78bfa',
+        500: '#8b5cf6',
+        600: '#7c3aed',
+        700: '#6d28d9',
+        800: '#5b21b6',
+        900: '#4c1d95',
+      },
+      secondary: {
+        400: '#e879f9',
+        500: '#d946ef',
+        600: '#c026d3',
+      },
+      gradient: 'from-violet-500 to-fuchsia-600',
+    },
+    {
+      name: 'Emerald & Lime',
+      description: '자연스럽고 활력적인 느낌 - 에너지와 성장',
+      primary: {
+        50: '#ecfdf5',
+        100: '#d1fae5',
+        200: '#a7f3d0',
+        300: '#6ee7b7',
+        400: '#34d399',
+        500: '#10b981',
+        600: '#059669',
+        700: '#047857',
+        800: '#065f46',
+        900: '#064e3b',
+      },
+      secondary: {
+        400: '#a3e635',
+        500: '#84cc16',
+        600: '#65a30d',
+      },
+      gradient: 'from-emerald-500 to-lime-600',
+    },
+    {
+      name: 'Amber & Yellow',
+      description: '밝고 긍정적인 느낌 - 즐거운 학습 경험',
+      primary: {
+        50: '#fffbeb',
+        100: '#fef3c7',
+        200: '#fde68a',
+        300: '#fcd34d',
+        400: '#fbbf24',
+        500: '#f59e0b',
+        600: '#d97706',
+        700: '#b45309',
+        800: '#92400e',
+        900: '#78350f',
+      },
+      secondary: {
+        400: '#facc15',
+        500: '#eab308',
+        600: '#ca8a04',
+      },
+      gradient: 'from-amber-500 to-yellow-600',
+    },
+    {
+      name: 'Cyan & Sky',
+      description: '시원하고 깨끗한 느낌 - 명확하고 투명한',
+      primary: {
+        50: '#ecfeff',
+        100: '#cffafe',
+        200: '#a5f3fc',
+        300: '#67e8f9',
+        400: '#22d3ee',
+        500: '#06b6d4',
+        600: '#0891b2',
+        700: '#0e7490',
+        800: '#155e75',
+        900: '#164e63',
+      },
+      secondary: {
+        400: '#38bdf8',
+        500: '#0ea5e9',
+        600: '#0284c7',
+      },
+      gradient: 'from-cyan-500 to-sky-600',
     },
   ];
 

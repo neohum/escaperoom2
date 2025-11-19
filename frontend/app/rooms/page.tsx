@@ -65,12 +65,20 @@ export default function RoomsPage() {
                 🎯 방탈출 교육 플랫폼
               </Link>
               {isDev && (
-                <Link
-                  href="/colors"
-                  className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full hover:bg-yellow-200"
-                >
-                  🎨 컬러셋
-                </Link>
+                <div className="flex gap-2">
+                  <Link
+                    href="/colors"
+                    className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full hover:bg-yellow-200"
+                  >
+                    🎨 팔레트
+                  </Link>
+                  <Link
+                    href="/color-preview"
+                    className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full hover:bg-green-200"
+                  >
+                    👁️ 미리보기
+                  </Link>
+                </div>
               )}
             </div>
             <div className="flex gap-4">

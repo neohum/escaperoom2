@@ -3,12 +3,14 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { getDB } from '../config/database';
 import { v4 as uuidv4 } from 'uuid';
+import passport from '../config/passport';
 
 const router = Router();
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = '7d';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // Register
 router.post('/register', async (req: Request, res: Response) => {
@@ -136,8 +138,192 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 });
 
-// TODO: OAuth routes (Google, Kakao, Naver)
-// These require OAuth client setup and callback URLs
+// ============================================
+// OAuth Routes
+// ============================================
+
+// Google OAuth
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email'],
+  session: false
+}));
+
+router.get('/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=google` }),
+  (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+
+      // Generate JWT
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+
+      // Redirect to frontend with token
+      res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role
+      }))}`);
+    } catch (error) {
+      console.error('Google callback error:', error);
+      res.redirect(`${FRONTEND_URL}/login?error=google`);
+    }
+  }
+);
+
+// Kakao OAuth
+router.get('/kakao', passport.authenticate('kakao', { session: false }));
+
+router.get('/kakao/callback',
+  passport.authenticate('kakao', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=kakao` }),
+  (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+
+      // Generate JWT
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+
+      // Redirect to frontend with token
+      res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role
+      }))}`);
+    } catch (error) {
+      console.error('Kakao callback error:', error);
+      res.redirect(`${FRONTEND_URL}/login?error=kakao`);
+    }
+  }
+);
+
+// Naver OAuth (Manual implementation - no official passport strategy)
+router.get('/naver', (req: Request, res: Response) => {
+  const clientId = process.env.NAVER_CLIENT_ID;
+  const callbackUrl = encodeURIComponent(`${process.env.BACKEND_URL || 'http://localhost:4000'}/api/auth/naver/callback`);
+  const state = Math.random().toString(36).substring(7);
+
+  if (!clientId) {
+    return res.redirect(`${FRONTEND_URL}/login?error=naver_not_configured`);
+  }
+
+  const naverAuthUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&redirect_uri=${callbackUrl}&state=${state}`;
+  res.redirect(naverAuthUrl);
+});
+
+router.get('/naver/callback', async (req: Request, res: Response) => {
+  try {
+    const { code, state } = req.query;
+    const clientId = process.env.NAVER_CLIENT_ID;
+    const clientSecret = process.env.NAVER_CLIENT_SECRET;
+
+    if (!code || !clientId || !clientSecret) {
+      return res.redirect(`${FRONTEND_URL}/login?error=naver`);
+    }
+
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://nid.naver.com/oauth2.0/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: code as string,
+        state: state as string,
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenData.access_token) {
+      return res.redirect(`${FRONTEND_URL}/login?error=naver`);
+    }
+
+    // Get user profile
+    const profileResponse = await fetch('https://openapi.naver.com/v1/nid/me', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+
+    const profileData = await profileResponse.json();
+
+    if (profileData.resultcode !== '00') {
+      return res.redirect(`${FRONTEND_URL}/login?error=naver`);
+    }
+
+    const profile = profileData.response;
+    const email = profile.email;
+    const nickname = profile.nickname || profile.name;
+
+    if (!email) {
+      return res.redirect(`${FRONTEND_URL}/login?error=naver_no_email`);
+    }
+
+    const db = getDB();
+
+    // Check if user exists
+    const [users] = await db.query<any[]>(
+      'SELECT * FROM users WHERE email = ? OR (oauth_provider = ? AND oauth_id = ?)',
+      [email, 'naver', profile.id]
+    );
+
+    let user = users[0];
+
+    if (!user) {
+      // Create new user
+      const userId = uuidv4();
+      const username = nickname || email.split('@')[0];
+
+      await db.query(
+        `INSERT INTO users (id, email, username, oauth_provider, oauth_id, provider)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [userId, email, username, 'naver', profile.id, 'naver']
+      );
+
+      user = {
+        id: userId,
+        email,
+        username,
+        oauth_provider: 'naver',
+        oauth_id: profile.id,
+      };
+    } else if (!user.oauth_provider) {
+      // Link existing email account with Naver
+      await db.query(
+        'UPDATE users SET oauth_provider = ?, oauth_id = ? WHERE id = ?',
+        ['naver', profile.id, user.id]
+      );
+      user.oauth_provider = 'naver';
+      user.oauth_id = profile.id;
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    // Redirect to frontend with token
+    res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      role: user.role || 'creator'
+    }))}`);
+  } catch (error) {
+    console.error('Naver callback error:', error);
+    res.redirect(`${FRONTEND_URL}/login?error=naver`);
+  }
+});
 
 export default router;
 
