@@ -88,7 +88,7 @@ escaperoom/
 
 ```bash
 # 저장소 클론
-git clone https://github.com/your-username/escaperoom.git
+git clone https://github.com/neohum/escaperoom2.git
 cd escaperoom
 
 # 모든 의존성 설치
@@ -166,5 +166,5 @@ CC BY-NC-ND (저작자표시-비영리-변경금지)
 ---
 
 **문서 버전**: 1.0.0  
-**최종 수정일**: 2025-01-19
+**최종 수정일**: 2025-11-19
 
