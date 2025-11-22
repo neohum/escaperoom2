@@ -218,25 +218,52 @@ export default function ScenesPage() {
   useEffect(() => {
     if (previewMode && scenes.length > 0) {
       const fetchAllSceneContents = async () => {
+        console.log('🔍 미리보기 모드 활성화 - content 불러오기 시작');
         const token = localStorage.getItem('token');
         const updatedScenes = await Promise.all(
           scenes.map(async (scene) => {
-            if (scene.isDraft) return scene; // 임시저장은 건너뛰기
+            // 임시저장이거나 draft ID를 가진 scene은 API 호출 건너뛰기
+            if (scene.isDraft || scene.id.startsWith('draft_')) {
+              console.log('⏭️ 임시저장 scene 건너뛰기:', scene.id);
+              return scene;
+            }
             
             try {
+              console.log('📡 API 호출:', `${process.env.NEXT_PUBLIC_API_URL}/api/scenes/${scene.id}`);
               const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/scenes/${scene.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
               if (response.ok) {
                 const data = await response.json();
-                return { ...scene, content: data.scene?.content || '' };
+                console.log('✅ Scene 데이터 받음:', {
+                  id: scene.id,
+                  title: data.scene?.title,
+                  content: data.scene?.content ? `${data.scene.content.substring(0, 50)}...` : '없음',
+                  background_image: data.scene?.background_image ? 'SVG 데이터 있음' : '없음',
+                  layout_type: data.scene?.layout_type
+                });
+                return { 
+                  ...scene, 
+                  content: data.scene?.content || '',
+                  background_image: data.scene?.background_image || scene.background_image,
+                  layout_type: data.scene?.layout_type || scene.layout_type
+                };
+              } else {
+                console.warn(`⚠️ Scene ${scene.id} 로드 실패 (${response.status})`);
               }
             } catch (err) {
-              console.error(`Failed to fetch content for scene ${scene.id}:`, err);
+              console.error(`❌ Failed to fetch content for scene ${scene.id}:`, err);
             }
             return scene;
           })
         );
+        console.log('🎬 업데이트된 scenes 배열:', updatedScenes.map(s => ({
+          id: s.id,
+          title: s.title,
+          hasContent: !!s.content,
+          hasImage: !!s.background_image,
+          layout_type: s.layout_type
+        })));
         setScenes(updatedScenes);
       };
       
@@ -604,12 +631,26 @@ export default function ScenesPage() {
 
               {/* 현재 화면 미리보기 */}
               <div className="bg-white border-2 border-indigo-200 rounded-xl overflow-hidden">
+                {console.log('🎨 렌더링 중인 Scene:', {
+                  index: currentPreviewIndex,
+                  title: scenes[currentPreviewIndex]?.title,
+                  background_image: scenes[currentPreviewIndex]?.background_image ? '있음' : '없음',
+                  background_color: scenes[currentPreviewIndex]?.background_color,
+                  layout_type: scenes[currentPreviewIndex]?.layout_type,
+                  content: scenes[currentPreviewIndex]?.content ? `${scenes[currentPreviewIndex].content.substring(0, 50)}...` : '없음',
+                  hasContent: !!scenes[currentPreviewIndex]?.content,
+                  contentLength: scenes[currentPreviewIndex]?.content?.length || 0
+                })}
                 <div
                   className="h-96 flex items-center justify-center text-9xl relative"
                   style={{
                     backgroundColor: scenes[currentPreviewIndex].background_color,
                     backgroundImage: scenes[currentPreviewIndex].background_image 
-                      ? `url(${scenes[currentPreviewIndex].background_image})` 
+                      ? `url(${
+                          scenes[currentPreviewIndex].background_image.startsWith('data:') 
+                            ? scenes[currentPreviewIndex].background_image 
+                            : `${process.env.NEXT_PUBLIC_API_URL}${scenes[currentPreviewIndex].background_image}`
+                        })` 
                       : 'none',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center'
@@ -648,6 +689,12 @@ export default function ScenesPage() {
                   )}
 
                   {/* 텍스트 컨텐츠 미리보기 */}
+                  {console.log('📝 텍스트 섹션 조건 체크:', {
+                    layout_type: scenes[currentPreviewIndex].layout_type,
+                    isImageText: scenes[currentPreviewIndex].layout_type === 'image_text',
+                    hasContent: !!scenes[currentPreviewIndex].content,
+                    contentValue: scenes[currentPreviewIndex].content
+                  })}
                   {scenes[currentPreviewIndex].layout_type === 'image_text' && scenes[currentPreviewIndex].content && (
                     <div className="mt-6 p-6 bg-white border border-gray-200 rounded-lg">
                       <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -715,7 +762,13 @@ export default function ScenesPage() {
                     className="h-40 flex items-center justify-center text-6xl"
                     style={{
                       backgroundColor: scene.background_color,
-                      backgroundImage: scene.background_image ? `url(${scene.background_image})` : 'none',
+                      backgroundImage: scene.background_image 
+                        ? `url(${
+                            scene.background_image.startsWith('data:') 
+                              ? scene.background_image 
+                              : `${process.env.NEXT_PUBLIC_API_URL}${scene.background_image}`
+                          })` 
+                        : 'none',
                       backgroundSize: 'cover',
                       backgroundPosition: 'center'
                     }}
