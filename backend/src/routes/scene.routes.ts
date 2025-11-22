@@ -101,7 +101,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response): Promise
         description || null,
         background_image || null,
         background_color || '#ffffff',
-        JSON.stringify(content || {}),
+        content || '',
         layout_type && layout_type !== '' ? layout_type : 'image_text',
         transition_type || 'fade',
         auto_advance ? 1 : 0,
@@ -164,7 +164,7 @@ router.put('/:sceneId', authenticateToken, async (req: Request, res: Response): 
     }
     if (content !== undefined) {
       updates.push('content = ?');
-      values.push(JSON.stringify(content));
+      values.push(content);
     }
     if (layout_type !== undefined) {
       updates.push('layout_type = ?');

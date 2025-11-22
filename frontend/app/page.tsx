@@ -61,7 +61,7 @@ export default function Home() {
             </div>
             <nav className="flex gap-6 items-center">
               <Link href="/rooms" className="text-gray-700 hover:text-indigo-600 font-medium">
-                게임 목록
+                공개된 게임 목록
               </Link>
               {user ? (
                 <>
@@ -354,7 +354,7 @@ export default function Home() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link href="/rooms" className="hover:text-white">
-                    게임 목록
+                    공개된 게임 목록
                   </Link>
                 </li>
                 {(!user || user.role === 'creator') && (
