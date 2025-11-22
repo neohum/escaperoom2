@@ -1,6 +1,6 @@
 # 시작 가이드
 
-이 문서는 방탈출 교육 플랫폼을 처음 시작하는 개발자를 위한 가이드입니다.
+이 문서는 방탕출 교육 플랫폼을 처음 시작하는 개발자를 위한 가이드입니다.
 
 ## 📋 목차
 
@@ -331,7 +331,7 @@ Supabase SQL Editor에서 실행:
 INSERT INTO rooms (title, subtitle, description, difficulty, category, is_published)
 VALUES (
   '산으로 간 물고기',
-  '역사 교육 방탈출',
+  '역사 교육 방탕출',
   '의병 활동에 대해 배우는 교육용 게임',
   3,
   '역사',

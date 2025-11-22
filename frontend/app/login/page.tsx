@@ -181,7 +181,7 @@ export default function LoginPage() {
           <p className="text-gray-600">
             계정이 없으신가요?{' '}
             <Link href="/register" className="text-indigo-600 hover:text-indigo-800 font-medium">
-              회원가입
+              회원가입하기
             </Link>
           </p>
         </div>

@@ -25,9 +25,9 @@ router.get('/room/:roomId', optionalAuth, async (req: Request, res: Response) =>
     const db = getDB();
 
     const [questions] = await db.query(`
-      SELECT id, room_id, type, order_index, title, content,
-             options, correct_answer, hint, points, image_url,
-             video_url, similarity_threshold
+      SELECT id, room_id, scene_id, type, order_index, title, description, content,
+             answer, hint, points, youtube_id, character_svg_url,
+             similarity_threshold
       FROM questions
       WHERE room_id = ?
       ORDER BY order_index ASC
@@ -69,16 +69,17 @@ router.post('/', verifyToken, async (req: Request, res: Response): Promise<void>
     const userId = (req as AuthRequest).userId;
     const {
       room_id,
+      scene_id,
       type,
       order_index,
       title,
+      description,
       content,
-      options,
-      correct_answer,
+      answer,
       hint,
       points,
-      image_url,
-      video_url,
+      youtube_id,
+      character_svg_url,
       similarity_threshold
     } = req.body;
 
@@ -110,13 +111,13 @@ router.post('/', verifyToken, async (req: Request, res: Response): Promise<void>
 
     await db.query(`
       INSERT INTO questions (
-        id, room_id, type, order_index, title, content, options,
-        correct_answer, hint, points, image_url, video_url, similarity_threshold
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, room_id, scene_id, type, order_index, title, description, content,
+        answer, hint, points, youtube_id, character_svg_url, similarity_threshold
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      questionId, room_id, type, order_index || 0, title, content || null,
-      JSON.stringify(options || []), correct_answer || null, hint || null,
-      points || 10, image_url || null, video_url || null, similarity_threshold || 0.6
+      questionId, room_id, scene_id || null, type, order_index || 0, title, description || null,
+      JSON.stringify(content || {}), JSON.stringify(answer || {}), hint || null,
+      points || 10, youtube_id || null, character_svg_url || null, similarity_threshold || 0.6
     ]);
 
     res.status(201).json({
@@ -158,8 +159,8 @@ router.put('/:id', verifyToken, async (req: Request, res: Response): Promise<voi
     // Update question
     const updates = req.body;
     const allowedFields = [
-      'type', 'order_index', 'title', 'content', 'options', 'correct_answer',
-      'hint', 'points', 'image_url', 'video_url', 'similarity_threshold'
+      'scene_id', 'type', 'order_index', 'title', 'description', 'content', 'answer',
+      'hint', 'points', 'youtube_id', 'character_svg_url', 'similarity_threshold'
     ];
 
     const setClause = Object.keys(updates)

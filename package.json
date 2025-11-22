@@ -1,7 +1,7 @@
 {
   "name": "escaperoom-edu-platform",
   "version": "1.0.0",
-  "description": "교육용 방탈출 게임 제작 및 플레이 플랫폼",
+  "description": "교육용 방탕출 게임 제작 및 플레이 플랫폼",
   "private": true,
   "workspaces": [
     "frontend",

@@ -267,7 +267,7 @@ export function createClient() {
 import PDFDocument from 'pdfkit';
 
 const doc = new PDFDocument();
-doc.fontSize(20).text('방탈출 게임', { align: 'center' });
+doc.fontSize(20).text('방탕출 게임', { align: 'center' });
 doc.fontSize(12).text('문제 1: ...');
 doc.end();
 ```
@@ -575,9 +575,9 @@ export default defineConfig({
 **manifest.json**:
 ```json
 {
-  "name": "방탈출 교육 플랫폼",
-  "short_name": "방탈출",
-  "description": "교육용 방탈출 게임 플랫폼",
+  "name": "방탕출 교육 플랫폼",
+  "short_name": "방탕출",
+  "description": "교육용 방탕출 게임 플랫폼",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

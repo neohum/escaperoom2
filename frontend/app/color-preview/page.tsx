@@ -248,11 +248,7 @@ function PreviewHomePage({ scheme }: { scheme: ColorScheme }) {
       {/* Stats Section */}
       <section className={`bg-gradient-to-r ${scheme.gradient} text-white py-12 mt-8`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="text-3xl font-bold mb-2">월 1,300원</div>
-              <div className="text-white/80">저렴한 운영 비용</div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
             <div>
               <div className="text-3xl font-bold mb-2">무제한</div>
               <div className="text-white/80">게임 제작 개수</div>

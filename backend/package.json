@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "방탈출 교육 플랫폼 백엔드 API",
+  "description": "방탕출 교육 플랫폼 백엔드 API",
   "main": "dist/app.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/app.ts",
@@ -13,6 +13,7 @@
     "migrate": "node dist/migrations/run.js"
   },
   "dependencies": {
+    "@types/multer": "^2.0.0",
     "@types/uuid": "^10.0.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
@@ -25,6 +26,7 @@
     "ioredis": "^5.3.2",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "multer": "^2.0.2",
     "mysql2": "^3.6.5",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",

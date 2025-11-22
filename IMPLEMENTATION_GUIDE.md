@@ -1,4 +1,4 @@
-# 방탈출 교육 플랫폼 구현 가이드
+# 방탕출 교육 플랫폼 구현 가이드
 
 ## 📋 현재 상태 (최종 업데이트: 2025-11-19)
 
@@ -291,7 +291,7 @@ export async function generatePrintout(roomId: string): Promise<string> {
   doc.pipe(stream);
 
   // 게임 정보 및 문제 추가
-  doc.fontSize(20).text('방탈출 게임', { align: 'center' });
+  doc.fontSize(20).text('방탕출 게임', { align: 'center' });
   // ... 문제 추가
 
   doc.end();

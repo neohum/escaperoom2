@@ -15,6 +15,7 @@ import roomRoutes from './routes/room.routes';
 import questionRoutes from './routes/question.routes';
 import gameRoutes from './routes/game.routes';
 import uploadRoutes from './routes/upload.routes';
+import sceneRoutes from './routes/scene.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -47,6 +48,9 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// 정적 파일 서빙 (업로드된 파일)
+app.use('/uploads', express.static('uploads'));
+
 // Initialize Passport
 app.use(passport.initialize());
 
@@ -64,6 +68,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/scenes', sceneRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

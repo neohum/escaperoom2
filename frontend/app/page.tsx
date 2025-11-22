@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [isDev, setIsDev] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
@@ -24,6 +27,11 @@ export default function Home() {
     setUser(null);
   };
 
+  const handleRoleSelect = (role: 'user' | 'creator') => {
+    setShowRoleModal(false);
+    router.push(`/register?role=${role}`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
@@ -31,9 +39,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
-              <Link href="/" className="text-2xl font-bold text-indigo-600">
-                🎯 방탈출 교육 플랫폼
-              </Link>
+            <Link href="/" className="text-2xl font-bold text-indigo-600">
+                🎯 방탕출 교육 플랫폼
+            </Link>
               {isDev && (
                 <div className="flex gap-2">
                   <Link
@@ -57,9 +65,16 @@ export default function Home() {
               </Link>
               {user ? (
                 <>
-                  <Link href="/create" className="text-gray-700 hover:text-indigo-600 font-medium">
-                    게임 만들기
-                  </Link>
+                  {user.role === 'creator' && (
+                    <>
+                      <Link href="/my-games" className="text-gray-700 hover:text-indigo-600 font-medium">
+                        내 게임
+                      </Link>
+                      <Link href="/create" className="text-gray-700 hover:text-indigo-600 font-medium">
+                        게임 만들기
+                      </Link>
+                    </>
+                  )}
                   <span className="text-gray-600">안녕하세요, {user.username}님</span>
                   <button
                     onClick={handleLogout}
@@ -76,18 +91,91 @@ export default function Home() {
                   >
                     로그인
                   </Link>
-                  <Link
-                    href="/register"
+                  <button
+                    onClick={() => setShowRoleModal(true)}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
                   >
                     회원가입
-                  </Link>
+                  </button>
                 </>
               )}
             </nav>
           </div>
         </div>
       </header>
+
+      {/* 역할 선택 모달 */}
+      {showRoleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-3xl font-bold text-gray-900">회원가입</h2>
+              <button
+                onClick={() => setShowRoleModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-center text-gray-600 mb-8">계정 유형을 선택해주세요</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 게임참여자 */}
+              <button
+                onClick={() => handleRoleSelect('user')}
+                className="group bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-indigo-200 rounded-xl p-6 hover:border-indigo-500 hover:shadow-lg transition-all duration-200"
+              >
+                <div className="text-5xl mb-4">🎮</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">게임참여자</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  방탈출 게임을 플레이하고<br />
+                  학습 경험을 즐기세요
+                </p>
+                <ul className="text-left text-sm text-gray-500 space-y-1">
+                  <li>✓ 게임 플레이</li>
+                  <li>✓ 배지 획득</li>
+                  <li>✓ 순위 경쟁</li>
+                  <li>✓ 무료 이용</li>
+                </ul>
+                <div className="mt-4 text-indigo-600 font-semibold group-hover:text-indigo-700">
+                  선택하기 →
+                </div>
+              </button>
+
+              {/* 컨텐츠 생산자 */}
+              <button
+                onClick={() => handleRoleSelect('creator')}
+                className="group bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 hover:border-purple-500 hover:shadow-lg transition-all duration-200"
+              >
+                <div className="text-5xl mb-4">🎨</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">컨텐츠 생산자</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  교육용 방탈출 게임을<br />
+                  만들고 공유하세요
+                </p>
+                <ul className="text-left text-sm text-gray-500 space-y-1">
+                  <li>✓ 게임 제작</li>
+                  <li>✓ 팀 협업</li>
+                  <li>✓ 통계 분석</li>
+                </ul>
+                <div className="mt-4 text-purple-600 font-semibold group-hover:text-purple-700">
+                  선택하기 →
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-6 text-center">
+              <Link 
+                href="/login" 
+                className="text-gray-500 hover:text-gray-700 text-sm"
+                onClick={() => setShowRoleModal(false)}
+              >
+                이미 계정이 있으신가요? 로그인
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
@@ -108,12 +196,14 @@ export default function Home() {
           >
             게임 둘러보기
           </Link>
-          <Link
-            href="/create"
-            className="bg-white text-indigo-600 px-8 py-4 rounded-lg hover:bg-gray-50 font-bold text-lg shadow-lg border-2 border-indigo-600"
-          >
-            게임 만들기
-          </Link>
+          {(!user || user.role === 'creator') && (
+            <Link
+              href={user ? "/create" : "/register?role=creator"}
+              className="bg-white text-indigo-600 px-8 py-4 rounded-lg hover:bg-gray-50 font-bold text-lg shadow-lg border-2 border-indigo-600"
+            >
+              게임 만들기
+            </Link>
+          )}
         </div>
       </section>
 
@@ -126,7 +216,7 @@ export default function Home() {
             <div className="text-4xl mb-4">🎨</div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">쉬운 제작</h3>
             <p className="text-gray-600">
-              코딩 없이 직관적인 인터페이스로 누구나 쉽게 방탈출 게임을 만들 수 있습니다.
+              코딩 없이 직관적인 인터페이스로 누구나 쉽게 방탕출 게임을 만들 수 있습니다.
             </p>
           </div>
 
@@ -169,9 +259,9 @@ export default function Home() {
           {/* Feature 6 */}
           <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-shadow">
             <div className="text-4xl mb-4">💰</div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">저렴한 비용</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">무료 사용</h3>
             <p className="text-gray-600">
-              월 1,300원으로 무제한 게임 제작! 학생들은 무료로 플레이할 수 있습니다.
+              무제한 게임 제작! 학생들은 무료로 플레이할 수 있습니다.
             </p>
           </div>
         </div>
@@ -180,11 +270,7 @@ export default function Home() {
       {/* Stats Section */}
       <section className="bg-indigo-600 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold mb-2">월 1,300원</div>
-              <div className="text-indigo-200">저렴한 운영 비용</div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
             <div>
               <div className="text-4xl font-bold mb-2">무제한</div>
               <div className="text-indigo-200">게임 제작 개수</div>
@@ -205,8 +291,8 @@ export default function Home() {
             <div className="bg-indigo-100 text-indigo-600 w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
               1
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">회원가입</h3>
-            <p className="text-gray-600">간단한 정보만 입력하면 바로 시작할 수 있습니다.</p>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">역할 선택 & 가입</h3>
+            <p className="text-gray-600">게임참여자 또는 컨텐츠 생산자를 선택하고 가입하세요.</p>
           </div>
 
           <div className="text-center">
@@ -271,11 +357,22 @@ export default function Home() {
                     게임 목록
                   </Link>
                 </li>
-                <li>
-                  <Link href="/create" className="hover:text-white">
-                    게임 만들기
-                  </Link>
-                </li>
+                {(!user || user.role === 'creator') && (
+                  <>
+                    {user && (
+                      <li>
+                        <Link href="/my-games" className="hover:text-white">
+                          내 게임
+                        </Link>
+                      </li>
+                    )}
+                    <li>
+                      <Link href={user ? "/create" : "/register?role=creator"} className="hover:text-white">
+                        게임 만들기
+                      </Link>
+                    </li>
+                  </>
+                )}
                 <li>
                   <Link href="/login" className="hover:text-white">
                     로그인

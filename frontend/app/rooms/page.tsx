@@ -20,15 +20,25 @@ export default function RoomsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isDev, setIsDev] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     fetchRooms();
     setIsDev(process.env.NODE_ENV === 'development');
+
+    // Check if user is logged in
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
   }, []);
 
   const fetchRooms = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/rooms`);
+      // /rooms 페이지는 모든 사용자에게 공개된 게임만 표시
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/rooms`;
+      
+      const response = await fetch(url);
       const data = await response.json();
 
       if (!response.ok) {
@@ -62,7 +72,7 @@ export default function RoomsPage() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
               <Link href="/" className="text-2xl font-bold text-indigo-600">
-                🎯 방탈출 교육 플랫폼
+                🎯 방탕출 교육 플랫폼
               </Link>
               {isDev && (
                 <div className="flex gap-2">
@@ -82,19 +92,31 @@ export default function RoomsPage() {
               )}
             </div>
             <div className="flex gap-4">
-              <Link
-                href="/create"
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
-              >
-                게임 만들기
-              </Link>
+              {user?.role === 'creator' && (
+                <>
+                  <Link
+                    href="/my-games"
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+                  >
+                    내 게임
+                  </Link>
+                  <Link
+                    href="/create"
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+                  >
+                    게임 만들기
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">게임 목록</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-8">
+          게임 목록
+        </h1>
 
         {loading && (
           <div className="text-center py-12">
@@ -112,12 +134,6 @@ export default function RoomsPage() {
         {!loading && !error && rooms.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-600 text-lg">아직 게임이 없습니다.</p>
-            <Link
-              href="/create"
-              className="inline-block mt-4 bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700"
-            >
-              첫 게임 만들기
-            </Link>
           </div>
         )}
 

@@ -24,7 +24,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
           // Check if user exists
           const [users] = await db.query<any[]>(
-            'SELECT * FROM users WHERE email = ? OR oauth_provider = ? AND oauth_id = ?',
+            'SELECT * FROM users WHERE email = ? OR (provider = ? AND provider_id = ?)',
             [email, 'google', profile.id]
           );
 
@@ -36,7 +36,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             const username = profile.displayName || email.split('@')[0];
 
             await db.query(
-              `INSERT INTO users (id, email, username, oauth_provider, oauth_id, role, created_at)
+              `INSERT INTO users (id, email, name, provider, provider_id, role, created_at)
                VALUES (?, ?, ?, ?, ?, ?, NOW())`,
               [userId, email, username, 'google', profile.id, 'creator']
             );
@@ -44,19 +44,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             user = {
               id: userId,
               email,
-              username,
-              oauth_provider: 'google',
-              oauth_id: profile.id,
+              name: username,
+              provider: 'google',
+              provider_id: profile.id,
               role: 'creator',
             };
-          } else if (!user.oauth_provider) {
+          } else if (!user.provider || user.provider === 'local') {
             // Link existing email account with Google
             await db.query(
-              'UPDATE users SET oauth_provider = ?, oauth_id = ? WHERE id = ?',
+              'UPDATE users SET provider = ?, provider_id = ? WHERE id = ?',
               ['google', profile.id, user.id]
             );
-            user.oauth_provider = 'google';
-            user.oauth_id = profile.id;
+            user.provider = 'google';
+            user.provider_id = profile.id;
           }
 
           return done(null, user);
@@ -70,12 +70,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 // Kakao OAuth Strategy
 if (process.env.KAKAO_CLIENT_ID) {
+  const kakaoConfig: any = {
+    clientID: process.env.KAKAO_CLIENT_ID,
+    callbackURL: `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/auth/kakao/callback`,
+  };
+  
+  // Add clientSecret if provided
+  if (process.env.KAKAO_CLIENT_SECRET) {
+    kakaoConfig.clientSecret = process.env.KAKAO_CLIENT_SECRET;
+  }
+  
   passport.use(
     new KakaoStrategy(
-      {
-        clientID: process.env.KAKAO_CLIENT_ID,
-        callbackURL: `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/auth/kakao/callback`,
-      },
+      kakaoConfig,
       async (_accessToken: any, _refreshToken: any, profile: any, done: any) => {
         try {
           const db = getDB();
@@ -83,12 +90,12 @@ if (process.env.KAKAO_CLIENT_ID) {
           const nickname = profile.displayName || profile._json?.properties?.nickname;
 
           if (!email) {
-            return done(new Error('No email found in Kakao profile'));
+            return done(new Error('No email found in Kakao profile. Please check email consent settings.'));
           }
 
           // Check if user exists
           const [users] = await db.query<any[]>(
-            'SELECT * FROM users WHERE email = ? OR oauth_provider = ? AND oauth_id = ?',
+            'SELECT * FROM users WHERE email = ? OR (provider = ? AND provider_id = ?)',
             [email, 'kakao', profile.id]
           );
 
@@ -100,7 +107,7 @@ if (process.env.KAKAO_CLIENT_ID) {
             const username = nickname || email.split('@')[0];
 
             await db.query(
-              `INSERT INTO users (id, email, username, oauth_provider, oauth_id, role, created_at)
+              `INSERT INTO users (id, email, name, provider, provider_id, role, created_at)
                VALUES (?, ?, ?, ?, ?, ?, NOW())`,
               [userId, email, username, 'kakao', profile.id, 'creator']
             );
@@ -108,19 +115,19 @@ if (process.env.KAKAO_CLIENT_ID) {
             user = {
               id: userId,
               email,
-              username,
-              oauth_provider: 'kakao',
-              oauth_id: profile.id,
+              name: username,
+              provider: 'kakao',
+              provider_id: profile.id,
               role: 'creator',
             };
-          } else if (!user.oauth_provider) {
+          } else if (!user.provider || user.provider === 'local') {
             // Link existing email account with Kakao
             await db.query(
-              'UPDATE users SET oauth_provider = ?, oauth_id = ? WHERE id = ?',
+              'UPDATE users SET provider = ?, provider_id = ? WHERE id = ?',
               ['kakao', profile.id, user.id]
             );
-            user.oauth_provider = 'kakao';
-            user.oauth_id = profile.id;
+            user.provider = 'kakao';
+            user.provider_id = profile.id;
           }
 
           return done(null, user);

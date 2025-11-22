@@ -2,7 +2,7 @@
 
 ## 개요
 
-방탈출 교육 플랫폼은 다음 3가지 소셜 로그인을 지원합니다:
+방탕출 교육 플랫폼은 다음 3가지 소셜 로그인을 지원합니다:
 - Google OAuth 2.0
 - Kakao Login
 - Naver Login
@@ -23,7 +23,7 @@
 4. **API 및 서비스 > 사용자 인증 정보** 이동
    - **사용자 인증 정보 만들기 > OAuth 클라이언트 ID** 클릭
    - 애플리케이션 유형: 웹 애플리케이션
-   - 이름: "방탈출 교육 플랫폼 Web Client"
+   - 이름: "방탕출 교육 플랫폼 Web Client"
    - 승인된 자바스크립트 원본:
      - `http://localhost:3000` (개발)
      - `https://yourdomain.com` (프로덕션)
@@ -47,7 +47,7 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 
 1. [Kakao Developers](https://developers.kakao.com/) 접속 및 로그인
 2. **내 애플리케이션 > 애플리케이션 추가하기**
-   - 앱 이름: "방탈출 교육 플랫폼"
+   - 앱 이름: "방탕출 교육 플랫폼"
    - 사업자명: 본인 이름 또는 회사명
 
 3. **앱 설정 > 플랫폼** 이동
@@ -62,9 +62,14 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret_here
      - `http://localhost:4000/api/auth/kakao/callback` (개발)
      - `https://api.yourdomain.com/api/auth/kakao/callback` (프로덕션)
 
-5. **제품 설정 > 카카오 로그인 > 동의항목** 이동
+4. **제품 설정 > 카카오 로그인 > 동의항목** 이동
    - **닉네임**: 필수 동의
-   - **카카오계정(이메일)**: 필수 동의
+   - **카카오계정(이메일)**: 필수 동의 ⚠️ **중요!**
+
+5. **제품 설정 > 카카오 로그인 > 보안** 이동 (선택사항)
+   - **Client Secret** 코드 생성
+   - 활성화 상태: "사용함"으로 변경
+   - 생성된 코드 복사
 
 6. **앱 설정 > 앱 키** 에서 **REST API 키** 복사
 
@@ -73,6 +78,7 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 `backend/.env` 파일에 추가:
 ```env
 KAKAO_CLIENT_ID=your_kakao_rest_api_key_here
+KAKAO_CLIENT_SECRET=your_kakao_client_secret_here  # 선택사항
 ```
 
 ## 3. Naver Login 설정
@@ -81,7 +87,7 @@ KAKAO_CLIENT_ID=your_kakao_rest_api_key_here
 
 1. [Naver Developers](https://developers.naver.com/) 접속 및 로그인
 2. **Application > 애플리케이션 등록**
-   - 애플리케이션 이름: "방탈출 교육 플랫폼"
+   - 애플리케이션 이름: "방탕출 교육 플랫폼"
    - 사용 API: **네이버 로그인** 선택
 
 3. **로그인 오픈 API 서비스 환경** 설정
@@ -142,7 +148,12 @@ npm run dev
 
 ### Kakao Login 오류
 - **KOE006**: Redirect URI가 등록되지 않음 - Kakao Developers에서 URI 등록 확인
-- **KOE101**: 필수 동의 항목 미동의 - 동의항목 설정 확인
+- **KOE101 (앱 관리자 설정 오류)**: 
+  - 원인 1: 카카오 로그인이 활성화되지 않음 → 제품 설정 > 카카오 로그인 활성화
+  - 원인 2: Redirect URI 미등록 또는 불일치 → 정확한 URI 등록 확인
+  - 원인 3: 이메일 동의항목이 필수로 설정되지 않음 → 동의항목에서 이메일을 "필수 동의"로 변경
+  - 원인 4: 플랫폼(Web) 미등록 → 앱 설정 > 플랫폼에서 Web 플랫폼 추가
+- **KOE303**: 이메일 정보 없음 - 동의항목에서 이메일을 필수로 설정
 
 ### Naver Login 오류
 - **invalid_request**: Callback URL 불일치 - Naver Developers에서 URL 확인

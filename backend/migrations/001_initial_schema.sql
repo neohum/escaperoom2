@@ -1,4 +1,4 @@
--- 방탈출 교육 플랫폼 데이터베이스 스키마
+-- 방탕출 교육 플랫폼 데이터베이스 스키마
 -- MySQL 8.0+
 
 -- 1. Users 테이블
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS rooms (
 CREATE TABLE IF NOT EXISTS questions (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   room_id VARCHAR(36) NOT NULL,
-  type ENUM('multiple_choice', 'short_answer', 'image_puzzle', 'drag_drop', 'sequence', 'hotspot', 'password', 'story_choice', 'mini_game') NOT NULL,
+  type ENUM('multiple_choice', 'multiple_answer', 'true_false', 'short_answer', 'image_puzzle', 'drag_drop', 'sequence', 'hotspot', 'password', 'story_choice', 'mini_game') NOT NULL,
   order_index INT NOT NULL,
   title VARCHAR(255) NOT NULL,
   description TEXT,

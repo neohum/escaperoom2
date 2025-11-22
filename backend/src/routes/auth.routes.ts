@@ -12,26 +12,99 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = '7d';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+// Check email availability
+router.post('/check-email', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ error: 'Email is required' });
+      return;
+    }
+
+    const db = getDB();
+    const [existingUsers] = await db.query(
+      'SELECT id FROM users WHERE email = ?',
+      [email]
+    );
+
+    const isAvailable = !Array.isArray(existingUsers) || existingUsers.length === 0;
+
+    res.json({
+      available: isAvailable,
+      message: isAvailable ? 'Email is available' : 'Email is already taken'
+    });
+  } catch (error) {
+    console.error('Check email error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Check username availability
+router.post('/check-username', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      res.status(400).json({ error: 'Username is required' });
+      return;
+    }
+
+    const db = getDB();
+    const [existingUsers] = await db.query(
+      'SELECT id FROM users WHERE name = ?',
+      [username]
+    );
+
+    const isAvailable = !Array.isArray(existingUsers) || existingUsers.length === 0;
+
+    res.json({
+      available: isAvailable,
+      message: isAvailable ? 'Username is available' : 'Username is already taken'
+    });
+  } catch (error) {
+    console.error('Check username error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Register
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, username, provider = 'local' } = req.body;
+    const { email, password, username, provider = 'local', role = 'user' } = req.body;
 
     if (!email || !password || !username) {
       res.status(400).json({ error: 'Email, password, and username are required' });
       return;
     }
 
+    // Validate role
+    if (!['user', 'creator', 'admin'].includes(role)) {
+      res.status(400).json({ error: 'Invalid role. Must be user, creator, or admin' });
+      return;
+    }
+
     const db = getDB();
 
-    // Check if user exists
-    const [existingUsers] = await db.query(
+    // Check if email exists
+    const [existingEmails] = await db.query(
       'SELECT id FROM users WHERE email = ?',
       [email]
     );
 
-    if (Array.isArray(existingUsers) && existingUsers.length > 0) {
-      res.status(409).json({ error: 'User already exists' });
+    if (Array.isArray(existingEmails) && existingEmails.length > 0) {
+      res.status(409).json({ error: 'Email already exists' });
+      return;
+    }
+
+    // Check if username exists
+    const [existingUsernames] = await db.query(
+      'SELECT id FROM users WHERE name = ?',
+      [username]
+    );
+
+    if (Array.isArray(existingUsernames) && existingUsernames.length > 0) {
+      res.status(409).json({ error: 'Username already exists' });
       return;
     }
 
@@ -41,17 +114,17 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     // Create user
     const userId = uuidv4();
     await db.query(
-      'INSERT INTO users (id, email, password, username, provider) VALUES (?, ?, ?, ?, ?)',
-      [userId, email, hashedPassword, username, provider]
+      'INSERT INTO users (id, email, password_hash, name, provider, role) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, email, hashedPassword, username, provider, role]
     );
 
     // Generate JWT
-    const token = jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const token = jwt.sign({ userId, email, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
     res.status(201).json({
       message: 'User registered successfully',
       token,
-      user: { id: userId, email, username }
+      user: { id: userId, email, username, role }
     });
   } catch (error) {
     console.error('Register error:', error);
@@ -73,7 +146,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
     // Find user
     const [users] = await db.query(
-      'SELECT id, email, password, username, provider FROM users WHERE email = ?',
+      'SELECT id, email, password_hash, name, provider, role FROM users WHERE email = ?',
       [email]
     );
 
@@ -91,19 +164,19 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     }
 
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
       res.status(401).json({ error: 'Invalid credentials' });
       return;
     }
 
     // Generate JWT
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const token = jwt.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
     res.json({
       message: 'Login successful',
       token,
-      user: { id: user.id, email: user.email, username: user.username }
+      user: { id: user.id, email: user.email, username: user.name, role: user.role }
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -130,7 +203,7 @@ router.get('/me', async (req: Request, res: Response): Promise<void> => {
     const db = getDB();
 
     const [users] = await db.query(
-      'SELECT id, email, username, provider, created_at FROM users WHERE id = ?',
+      'SELECT id, email, name as username, provider, role, created_at FROM users WHERE id = ?',
       [decoded.userId]
     );
 
@@ -173,7 +246,7 @@ router.get('/google/callback',
       res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
         id: user.id,
         email: user.email,
-        username: user.username,
+        username: user.name,
         role: user.role
       }))}`);
     } catch (error) {
@@ -203,7 +276,7 @@ router.get('/kakao/callback',
       res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
         id: user.id,
         email: user.email,
-        username: user.username,
+        username: user.name,
         role: user.role
       }))}`);
     } catch (error) {
@@ -283,7 +356,7 @@ router.get('/naver/callback', async (req: Request, res: Response) => {
 
     // Check if user exists
     const [users] = await db.query<any[]>(
-      'SELECT * FROM users WHERE email = ? OR (oauth_provider = ? AND oauth_id = ?)',
+      'SELECT * FROM users WHERE email = ? OR (provider = ? AND provider_id = ?)',
       [email, 'naver', profile.id]
     );
 
@@ -295,26 +368,27 @@ router.get('/naver/callback', async (req: Request, res: Response) => {
       const username = nickname || email.split('@')[0];
 
       await db.query(
-        `INSERT INTO users (id, email, username, oauth_provider, oauth_id, provider)
+        `INSERT INTO users (id, email, name, provider, provider_id, role)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [userId, email, username, 'naver', profile.id, 'naver']
+        [userId, email, username, 'naver', profile.id, 'creator']
       );
 
       user = {
         id: userId,
         email,
-        username,
-        oauth_provider: 'naver',
-        oauth_id: profile.id,
+        name: username,
+        provider: 'naver',
+        provider_id: profile.id,
+        role: 'creator',
       };
-    } else if (!user.oauth_provider) {
+    } else if (!user.provider || user.provider === 'local') {
       // Link existing email account with Naver
       await db.query(
-        'UPDATE users SET oauth_provider = ?, oauth_id = ? WHERE id = ?',
+        'UPDATE users SET provider = ?, provider_id = ? WHERE id = ?',
         ['naver', profile.id, user.id]
       );
-      user.oauth_provider = 'naver';
-      user.oauth_id = profile.id;
+      user.provider = 'naver';
+      user.provider_id = profile.id;
     }
 
     // Generate JWT
@@ -328,7 +402,7 @@ router.get('/naver/callback', async (req: Request, res: Response) => {
     res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
       id: user.id,
       email: user.email,
-      username: user.username,
+      username: user.name,
       role: user.role || 'creator'
     }))}`);
   } catch (error) {

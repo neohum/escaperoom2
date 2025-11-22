@@ -11,8 +11,8 @@ router.get('/', optionalAuth, async (_req: Request, res: Response): Promise<void
     const db = getDB();
     const [rooms] = await db.query(`
       SELECT r.id, r.title, r.description, r.category, r.target_grade,
-             r.difficulty, r.play_modes, r.estimated_time, r.thumbnail_url,
-             r.created_at, u.username as creator_name,
+             r.difficulty, r.play_modes, r.play_time_min, r.play_time_max, r.thumbnail,
+             r.created_at, u.name as creator_name,
              (SELECT COUNT(*) FROM questions WHERE room_id = r.id) as question_count
       FROM rooms r
       LEFT JOIN users u ON r.creator_id = u.id
@@ -28,6 +28,29 @@ router.get('/', optionalAuth, async (_req: Request, res: Response): Promise<void
   }
 });
 
+// Get creator's own rooms (both published and unpublished)
+router.get('/my/rooms', verifyToken, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as AuthRequest).userId;
+    const db = getDB();
+
+    const [rooms] = await db.query(`
+      SELECT r.id, r.title, r.description, r.category, r.target_grade,
+             r.difficulty, r.play_modes, r.play_time_min, r.play_time_max, r.thumbnail,
+             r.is_published, r.created_at, r.updated_at,
+             (SELECT COUNT(*) FROM questions WHERE room_id = r.id) as question_count
+      FROM rooms r
+      WHERE r.creator_id = ?
+      ORDER BY r.updated_at DESC
+    `, [userId]);
+
+    res.json({ rooms });
+  } catch (error) {
+    console.error('Get my rooms error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get room by ID
 router.get('/:id', optionalAuth, async (req: Request, res: Response): Promise<void> => {
   try {
@@ -35,7 +58,7 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response): Promise<vo
     const db = getDB();
 
     const [rooms] = await db.query(`
-      SELECT r.*, u.username as creator_name
+      SELECT r.*, u.name as creator_name
       FROM rooms r
       LEFT JOIN users u ON r.creator_id = u.id
       WHERE r.id = ?
@@ -50,7 +73,7 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response): Promise<vo
 
     // Get team members
     const [teamMembers] = await db.query(`
-      SELECT tm.id, tm.role, tm.permissions, tm.guest_token, u.username
+      SELECT tm.id, tm.role, tm.permissions, tm.guest_token, u.name as username
       FROM team_members tm
       LEFT JOIN users u ON tm.user_id = u.id
       WHERE tm.room_id = ?
@@ -76,7 +99,8 @@ router.post('/', verifyToken, async (req: Request, res: Response): Promise<void>
       target_grade,
       difficulty,
       play_modes,
-      estimated_time,
+      play_time_min,
+      play_time_max,
       credits,
       donation_info
     } = req.body;
@@ -93,11 +117,11 @@ router.post('/', verifyToken, async (req: Request, res: Response): Promise<void>
     await db.query(`
       INSERT INTO rooms (
         id, title, description, category, target_grade, difficulty,
-        play_modes, estimated_time, creator_id, edit_token, credits, donation_info
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        play_modes, play_time_min, play_time_max, creator_id, edit_token, credits, donation_info
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       roomId, title, description || null, category || null, target_grade || null,
-      difficulty || 3, JSON.stringify(play_modes || ['online']), estimated_time || 60,
+      difficulty || 3, JSON.stringify(play_modes || ['online']), play_time_min || 30, play_time_max || 60,
       userId, editToken, JSON.stringify(credits || {}), JSON.stringify(donation_info || {})
     ]);
 
@@ -145,8 +169,8 @@ router.put('/:id', verifyToken, async (req: Request, res: Response): Promise<voi
     const updates = req.body;
     const allowedFields = [
       'title', 'description', 'category', 'target_grade', 'difficulty',
-      'play_modes', 'estimated_time', 'is_published', 'credits', 'donation_info',
-      'thumbnail_url'
+      'play_modes', 'play_time_min', 'play_time_max', 'is_published', 'credits', 'donation_info',
+      'thumbnail'
     ];
 
     const setClause = Object.keys(updates)

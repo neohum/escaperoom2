@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showRoleModal, setShowRoleModal] = useState(true);
+  const [selectedRole, setSelectedRole] = useState<'user' | 'creator' | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -16,17 +19,139 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailCheck, setEmailCheck] = useState<{ checking: boolean; available: boolean | null; message: string }>({
+    checking: false,
+    available: null,
+    message: '',
+  });
+  const [usernameCheck, setUsernameCheck] = useState<{ checking: boolean; available: boolean | null; message: string }>({
+    checking: false,
+    available: null,
+    message: '',
+  });
+
+  useEffect(() => {
+    // URL 파라미터에서 role을 가져와 자동 선택
+    const roleParam = searchParams.get('role') as 'user' | 'creator' | null;
+    if (roleParam && (roleParam === 'user' || roleParam === 'creator')) {
+      setSelectedRole(roleParam);
+      setShowRoleModal(false);
+    }
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+
+    // Reset check status when user types
+    if (name === 'email') {
+      setEmailCheck({ checking: false, available: null, message: '' });
+    } else if (name === 'username') {
+      setUsernameCheck({ checking: false, available: null, message: '' });
+    }
+  };
+
+  const checkEmailAvailability = async () => {
+    if (!formData.email) {
+      setEmailCheck({ checking: false, available: null, message: '이메일을 입력해주세요' });
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setEmailCheck({ checking: false, available: false, message: '올바른 이메일 형식이 아닙니다' });
+      return;
+    }
+
+    setEmailCheck({ checking: true, available: null, message: '확인 중...' });
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/check-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEmailCheck({
+          checking: false,
+          available: data.available,
+          message: data.message,
+        });
+      } else {
+        setEmailCheck({ checking: false, available: false, message: '확인 실패' });
+      }
+    } catch (err) {
+      setEmailCheck({ checking: false, available: false, message: '확인 실패' });
+    }
+  };
+
+  const checkUsernameAvailability = async () => {
+    if (!formData.username) {
+      setUsernameCheck({ checking: false, available: null, message: '사용자명을 입력해주세요' });
+      return;
+    }
+
+    if (formData.username.length < 2) {
+      setUsernameCheck({ checking: false, available: false, message: '사용자명은 최소 2자 이상이어야 합니다' });
+      return;
+    }
+
+    setUsernameCheck({ checking: true, available: null, message: '확인 중...' });
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/check-username`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: formData.username }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setUsernameCheck({
+          checking: false,
+          available: data.available,
+          message: data.message,
+        });
+      } else {
+        setUsernameCheck({ checking: false, available: false, message: '확인 실패' });
+      }
+    } catch (err) {
+      setUsernameCheck({ checking: false, available: false, message: '확인 실패' });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validate email and username availability
+    if (emailCheck.available === false) {
+      setError('이메일 중복을 확인해주세요');
+      return;
+    }
+
+    if (usernameCheck.available === false) {
+      setError('사용자명 중복을 확인해주세요');
+      return;
+    }
+
+    if (emailCheck.available === null) {
+      setError('이메일 중복 확인을 해주세요');
+      return;
+    }
+
+    if (usernameCheck.available === null) {
+      setError('사용자명 중복 확인을 해주세요');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('비밀번호가 일치하지 않습니다');
@@ -48,6 +173,7 @@ export default function RegisterPage() {
           email: formData.email,
           password: formData.password,
           username: formData.username,
+          role: selectedRole,
         }),
       });
 
@@ -72,7 +198,98 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      {/* 역할 선택 모달 */}
+      {showRoleModal && !selectedRole && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl">
+            <h2 className="text-3xl font-bold text-center text-gray-900 mb-3">회원가입</h2>
+            <p className="text-center text-gray-600 mb-8">계정 유형을 선택해주세요</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 게임참여자 */}
+              <button
+                onClick={() => {
+                  setSelectedRole('user');
+                  setShowRoleModal(false);
+                }}
+                className="group bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-indigo-200 rounded-xl p-6 hover:border-indigo-500 hover:shadow-lg transition-all duration-200"
+              >
+                <div className="text-5xl mb-4">🎮</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">게임참여자</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  방탕출 게임을 플레이하고<br />
+                  학습 경험을 즐기세요
+                </p>
+                <ul className="text-left text-sm text-gray-500 space-y-1">
+                  <li>✓ 게임 플레이</li>
+                  <li>✓ 배지 획득</li>
+                  <li>✓ 순위 경쟁</li>
+                  <li>✓ 무료 이용</li>
+                </ul>
+                <div className="mt-4 text-indigo-600 font-semibold group-hover:text-indigo-700">
+                  선택하기 →
+                </div>
+              </button>
+
+              {/* 컨텐츠 생산자 */}
+              <button
+                onClick={() => {
+                  setSelectedRole('creator');
+                  setShowRoleModal(false);
+                }}
+                className="group bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 hover:border-purple-500 hover:shadow-lg transition-all duration-200"
+              >
+                <div className="text-5xl mb-4">🎨</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">컨텐츠 생산자</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  교육용 방탕출 게임을<br />
+                  만들고 공유하세요
+                </p>
+                <ul className="text-left text-sm text-gray-500 space-y-1">
+                  <li>✓ 게임 제작</li>
+                  <li>✓ 팀 협업</li>
+                  <li>✓ 통계 분석</li>
+                </ul>
+                <div className="mt-4 text-purple-600 font-semibold group-hover:text-purple-700">
+                  선택하기 →
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-6 text-center">
+              <Link href="/login" className="text-gray-500 hover:text-gray-700 text-sm">
+                이미 계정이 있으신가요? 로그인
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => {
+              setSelectedRole(null);
+              setShowRoleModal(true);
+            }}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            ← 뒤로
+          </button>
+          <div className="flex items-center gap-2 text-sm">
+            {selectedRole === 'user' ? (
+              <>
+                <span className="text-2xl">🎮</span>
+                <span className="font-semibold text-indigo-600">게임참여자</span>
+              </>
+            ) : (
+              <>
+                <span className="text-2xl">🎨</span>
+                <span className="font-semibold text-purple-600">컨텐츠 생산자</span>
+              </>
+            )}
+          </div>
+        </div>
         <h1 className="text-3xl font-bold text-center text-indigo-600 mb-8">회원가입</h1>
 
         {error && (
@@ -86,32 +303,62 @@ export default function RegisterPage() {
             <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
               사용자 이름
             </label>
-            <input
-              id="username"
-              name="username"
-              type="text"
-              value={formData.username}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              placeholder="홍길동"
-            />
+            <div className="flex gap-2">
+              <input
+                id="username"
+                name="username"
+                type="text"
+                value={formData.username}
+                onChange={handleChange}
+                required
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                placeholder="홍길동"
+              />
+              <button
+                type="button"
+                onClick={checkUsernameAvailability}
+                disabled={usernameCheck.checking || !formData.username}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {usernameCheck.checking ? '확인 중...' : '중복 확인'}
+              </button>
+            </div>
+            {usernameCheck.message && (
+              <p className={`mt-1 text-sm ${usernameCheck.available ? 'text-green-600' : 'text-red-600'}`}>
+                {usernameCheck.available ? '✓ ' : '✗ '}{usernameCheck.message}
+              </p>
+            )}
           </div>
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
               이메일
             </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              placeholder="your@email.com"
-            />
+            <div className="flex gap-2">
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                placeholder="your@email.com"
+              />
+              <button
+                type="button"
+                onClick={checkEmailAvailability}
+                disabled={emailCheck.checking || !formData.email}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {emailCheck.checking ? '확인 중...' : '중복 확인'}
+              </button>
+            </div>
+            {emailCheck.message && (
+              <p className={`mt-1 text-sm ${emailCheck.available ? 'text-green-600' : 'text-red-600'}`}>
+                {emailCheck.available ? '✓ ' : '✗ '}{emailCheck.message}
+              </p>
+            )}
           </div>
 
           <div>
