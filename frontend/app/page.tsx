@@ -65,6 +65,11 @@ export default function Home() {
               </Link>
               {user ? (
                 <>
+                  {user.role === 'admin' && (
+                    <Link href="/admin" className="px-3 py-1 bg-red-100 text-red-800 hover:bg-red-200 font-semibold rounded-full text-sm">
+                      🛡️ 관리자 대시보드
+                    </Link>
+                  )}
                   {user.role === 'creator' && (
                     <>
                       <Link href="/my-games" className="text-gray-700 hover:text-indigo-600 font-medium">

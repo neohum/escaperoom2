@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import SlateEditor from './SlateEditor';
+import type { ParagraphElement } from './slate.d';
+// import { Editor, EditorProvider } from 'react-simple-wysiwyg';
 
 export default function CreateRoomPage() {
   const router = useRouter();
@@ -16,6 +20,21 @@ export default function CreateRoomPage() {
     play_time_max: 60,
     play_modes: ['online'],
   });
+  const [introImage, setIntroImage] = useState<File | string>('');
+  const [introImagePreview, setIntroImagePreview] = useState<string>('');
+  const [introContent, setIntroContent] = useState<ParagraphElement[]>([
+    {
+      type: 'paragraph',
+      children: [{ text: '' }],
+    },
+  ]);
+  const safeSetIntroContent = (val: any) => {
+    if (!Array.isArray(val) || val.length === 0) {
+      setIntroContent([{ type: 'paragraph', children: [{ text: '' }] }]);
+    } else {
+      setIntroContent(val as ParagraphElement[]);
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isDev, setIsDev] = useState(false);
@@ -48,6 +67,64 @@ export default function CreateRoomPage() {
     router.push('/');
   };
 
+  const uploadImage = async (file: File): Promise<string> => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('로그인이 필요합니다');
+    }
+
+    const formDataImg = new FormData();
+    formDataImg.append('image', file);
+    const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/image`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formDataImg,
+    });
+
+    if (!uploadRes.ok) {
+      throw new Error('이미지 업로드에 실패했습니다');
+    }
+
+    const imgData = await uploadRes.json();
+    return imgData.url;
+  };
+
+  const processIntroContentImages = async (content: ParagraphElement[]): Promise<ParagraphElement[]> => {
+    const processedContent = await Promise.all(
+      content.map(async (element) => {
+        if ((element as any).type === 'image' && (element as any).imageId) {
+          const imageId = (element as any).imageId;
+          const base64 = localStorage.getItem(imageId);
+
+          if (base64) {
+            try {
+              // base64를 File로 변환
+              const response = await fetch(base64);
+              const blob = await response.blob();
+              const file = new File([blob], `image_${imageId}.png`, { type: blob.type });
+
+              // 서버에 업로드
+              const uploadedUrl = await uploadImage(file);
+
+              // 로컬스토리지에서 제거
+              localStorage.removeItem(imageId);
+
+              // URL 교체
+              return { ...element, url: uploadedUrl };
+            } catch (error) {
+              console.error('Image upload failed:', error);
+              // 업로드 실패 시 base64 URL 유지
+              return element;
+            }
+          }
+        }
+        return element;
+      })
+    );
+
+    return processedContent;
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -72,13 +149,27 @@ export default function CreateRoomPage() {
     setLoading(true);
 
     try {
+      // 1. 이미지 업로드 (있으면)
+      let uploadedImageUrl = '';
+      if (introImage && introImage instanceof File) {
+        uploadedImageUrl = await uploadImage(introImage);
+      }
+
+      // 2. 에디터 내용의 이미지들 처리
+      const processedIntroContent = await processIntroContentImages(introContent);
+
+      // 3. 게임 생성
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/rooms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          intro_image: uploadedImageUrl,
+          intro_content: JSON.stringify(processedIntroContent),
+        }),
       });
 
       const data = await response.json();
@@ -149,7 +240,9 @@ export default function CreateRoomPage() {
                 </button>
               </div>
             )}
+
           </div>
+
         </div>
       </header>
 
@@ -162,6 +255,7 @@ export default function CreateRoomPage() {
           </div>
         )}
 
+        {/* <EditorProvider> */}
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-8 space-y-6">
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
@@ -189,7 +283,7 @@ export default function CreateRoomPage() {
               value={formData.description}
               onChange={handleChange}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 font-bold placeholder-gray-400"
               placeholder="게임에 대한 설명을 입력하세요"
             />
           </div>
@@ -290,7 +384,47 @@ export default function CreateRoomPage() {
             </div>
           </div>
 
-          <div className="flex gap-4">
+          {/* 소개 이미지 & 텍스트 에디터 - moved here, right after play time inputs */}
+          <div className="mt-8">
+            <h2 className="text-lg font-bold text-gray-900 mb-2">소개 페이지 이미지 및 텍스트</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">소개 이미지 업로드</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setIntroImage(file as any);
+                    setIntroImagePreview(URL.createObjectURL(file));
+                  } else {
+                    setIntroImage('');
+                    setIntroImagePreview('');
+                  }
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              />
+              {introImagePreview && (
+                <div className="mt-2">
+                  <img src={introImagePreview} alt="소개 이미지 미리보기" className="max-h-48 rounded-lg border" />
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">소개 텍스트 (서식 지원)</label>
+              <div className="bg-white border border-gray-300 rounded-lg">
+                <SlateEditor
+                  value={Array.isArray(introContent) && introContent.length > 0 && introContent.some(e => e && e.type && Array.isArray(e.children))
+                    ? introContent
+                    : [{ type: 'paragraph', children: [{ text: '' }] }]}
+                  onChange={safeSetIntroContent}
+                  placeholder="게임 소개, 규칙, 배경 등 자유롭게 입력하세요. (굵게, 색상, 이미지, 링크 등 지원)"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-4 mt-8">
             <button
               type="submit"
               disabled={loading}
@@ -306,6 +440,7 @@ export default function CreateRoomPage() {
             </Link>
           </div>
         </form>
+        {/* </EditorProvider> */}
       </main>
     </div>
   );

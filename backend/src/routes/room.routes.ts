@@ -13,6 +13,7 @@ router.get('/', optionalAuth, async (_req: Request, res: Response): Promise<void
       SELECT r.id, r.title, r.description, r.category, r.target_grade,
              r.difficulty, r.play_modes, r.play_time_min, r.play_time_max, r.thumbnail,
              r.created_at, u.name as creator_name,
+             r.intro_content, r.intro_image,
              (SELECT COUNT(*) FROM questions WHERE room_id = r.id) as question_count
       FROM rooms r
       LEFT JOIN users u ON r.creator_id = u.id
@@ -38,6 +39,7 @@ router.get('/my/rooms', verifyToken, async (req: Request, res: Response): Promis
       SELECT r.id, r.title, r.description, r.category, r.target_grade,
              r.difficulty, r.play_modes, r.play_time_min, r.play_time_max, r.thumbnail,
              r.is_published, r.created_at, r.updated_at,
+             r.intro_content, r.intro_image,
              (SELECT COUNT(*) FROM questions WHERE room_id = r.id) as question_count
       FROM rooms r
       WHERE r.creator_id = ?
@@ -102,7 +104,9 @@ router.post('/', verifyToken, async (req: Request, res: Response): Promise<void>
       play_time_min,
       play_time_max,
       credits,
-      donation_info
+      donation_info,
+      intro_content,
+      intro_image
     } = req.body;
 
     if (!title) {
@@ -117,13 +121,38 @@ router.post('/', verifyToken, async (req: Request, res: Response): Promise<void>
     await db.query(`
       INSERT INTO rooms (
         id, title, description, category, target_grade, difficulty,
-        play_modes, play_time_min, play_time_max, creator_id, edit_token, credits, donation_info
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        play_modes, play_time_min, play_time_max, creator_id, edit_token, credits, donation_info, intro_content, intro_image
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       roomId, title, description || null, category || null, target_grade || null,
       difficulty || 3, JSON.stringify(play_modes || ['online']), play_time_min || 30, play_time_max || 60,
-      userId, editToken, JSON.stringify(credits || {}), JSON.stringify(donation_info || {})
+      userId, editToken, JSON.stringify(credits || {}), JSON.stringify(donation_info || {}),
+      intro_content || null, intro_image || null
     ]);
+
+    // Create default scene for intro
+    if (intro_content || intro_image) {
+      const sceneId = uuidv4();
+      await db.query(
+        `INSERT INTO scenes 
+         (id, room_id, order_index, title, description, background_image, background_color, content, layout_type, transition_type, auto_advance, auto_advance_delay)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          sceneId,
+          roomId,
+          0,
+          '소개',
+          '',
+          intro_image || null,
+          '#ffffff',
+          intro_content ? JSON.stringify({ text: intro_content }) : '',
+          'image_text',
+          'fade',
+          0,
+          0
+        ]
+      );
+    }
 
     // Add creator as team member with admin role
     await db.query(`
@@ -202,6 +231,10 @@ router.put('/:id', verifyToken, async (req: Request, res: Response): Promise<voi
 });
 
 // Delete room
+import path from 'path';
+import fs from 'fs';
+const uploadsDir = path.join(__dirname, '../../uploads');
+
 router.delete('/:id', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as AuthRequest).userId;
@@ -225,10 +258,35 @@ router.delete('/:id', verifyToken, async (req: Request, res: Response): Promise<
       return;
     }
 
-    // Delete room (cascade will handle related records)
+    // 1. Find all scenes for this room and collect image filenames
+    const [scenes] = await db.query<any[]>(
+      'SELECT background_image FROM scenes WHERE room_id = ?',
+      [id]
+    );
+    const imageFiles = (scenes || [])
+      .map(s => s.background_image)
+      .filter(Boolean)
+      .map((img: string) => {
+        // Extract filename from /uploads/filename or just filename
+        const match = img.match(/(?:\/uploads\/)?([\w\-]+\.[a-zA-Z0-9]+)/);
+        return match ? match[1] : null;
+      })
+      .filter(Boolean);
+
+    // 2. Delete room (cascade will handle related records)
     await db.query('DELETE FROM rooms WHERE id = ?', [id]);
 
-    res.json({ message: 'Room deleted successfully' });
+    // 3. Delete image files
+    for (const filename of imageFiles) {
+      if (typeof filename === 'string') {
+        const filePath = path.join(uploadsDir, filename);
+        if (fs.existsSync(filePath)) {
+          try { fs.unlinkSync(filePath); } catch (e) { /* ignore */ }
+        }
+      }
+    }
+
+    res.json({ message: 'Room and related images deleted successfully' });
   } catch (error) {
     console.error('Delete room error:', error);
     res.status(500).json({ error: 'Internal server error' });

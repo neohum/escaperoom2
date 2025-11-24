@@ -3,7 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import SlatePreview from './SlatePreview';
+import SlateEditor from '../../create/SlateEditor';
 
+interface RoomInfo {
+  id: string;
+  title: string;
+  intro_content?: string;
+  intro_image?: string;
+}
 interface Scene {
   id: string;
   title: string;
@@ -27,10 +35,80 @@ export default function ScenesPage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params.id as string;
+  // Check for preview=1 in URL
+  const [previewMode, setPreviewMode] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('preview') === '1') {
+        setPreviewMode(true);
+      }
+    }
+  }, []);
 
   const [scenes, setScenes] = useState<Scene[]>([]);
+  const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editIntroMode, setEditIntroMode] = useState(false);
+  const [editedIntroContent, setEditedIntroContent] = useState<any[]>([]);
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('로그인이 필요합니다');
+    }
+
+    const formDataImg = new FormData();
+    formDataImg.append('image', file);
+    const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/image`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formDataImg,
+    });
+
+    if (!uploadRes.ok) {
+      throw new Error('이미지 업로드에 실패했습니다');
+    }
+
+    const imgData = await uploadRes.json();
+    return imgData.url;
+  };
+
+  const processIntroContentImages = async (content: any[]): Promise<any[]> => {
+    const processedContent = await Promise.all(
+      content.map(async (element) => {
+        if ((element as any).type === 'image' && (element as any).imageId) {
+          const imageId = (element as any).imageId;
+          const base64 = localStorage.getItem(imageId);
+
+          if (base64) {
+            try {
+              // base64를 File로 변환
+              const response = await fetch(base64);
+              const blob = await response.blob();
+              const file = new File([blob], `image_${imageId}.png`, { type: blob.type });
+
+              // 서버에 업로드
+              const uploadedUrl = await uploadImage(file);
+
+              // 로컬스토리지에서 제거
+              localStorage.removeItem(imageId);
+
+              // URL 교체
+              return { ...element, url: uploadedUrl };
+            } catch (error) {
+              console.error('Image upload failed:', error);
+              // 업로드 실패 시 base64 URL 유지
+              return element;
+            }
+          }
+        }
+        return element;
+      })
+    );
+    return processedContent;
+  };
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -63,30 +141,51 @@ export default function ScenesPage() {
     hint: string;
     points: number;
   }>>([]);
-  const [previewMode, setPreviewMode] = useState(false);
+  // (moved above for preview param logic)
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [editingScene, setEditingScene] = useState<Scene | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showQuestionTypeSelector, setShowQuestionTypeSelector] = useState(false);
+  const [questionBuilderLocked, setQuestionBuilderLocked] = useState(false);
+  const [imagePreview, setImagePreview] = useState('');
 
+
+  // 1. 로그인/권한 체크 및 roomInfo fetch
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (!userData) {
       router.push('/login');
       return;
     }
-
     const userObj = JSON.parse(userData);
     setUser(userObj);
-    
     if (userObj.role !== 'creator') {
       router.push('/');
       return;
     }
-
-    fetchScenes();
-    fetchQuestions();
+    fetchRoomInfo();
   }, [roomId, router]);
+
+  // 2. roomInfo가 세팅된 후에만 scenes/questions fetch
+  useEffect(() => {
+    if (roomInfo) {
+      fetchScenes();
+      fetchQuestions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomInfo]);
+
+  const fetchRoomInfo = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/rooms/${roomId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setRoomInfo(data.room);
+      }
+    } catch (err) {
+      // ignore
+    }
+  };
 
   // 모달 열릴 때 임시 저장된 데이터 복구
   useEffect(() => {
@@ -126,7 +225,6 @@ export default function ScenesPage() {
   const fetchScenes = async () => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/scenes/room/${roomId}`);
-      
       let savedScenes: Scene[] = [];
       if (!response.ok) {
         // DB에 저장된 씬이 없어도 계속 진행
@@ -160,6 +258,42 @@ export default function ScenesPage() {
         }
       }
 
+      // Always prepend virtual intro scene if roomInfo has intro_content or intro_image
+      if (roomInfo && (roomInfo.intro_content || roomInfo.intro_image)) {
+        let introImage = roomInfo.intro_image || '';
+        if (introImage && !introImage.startsWith('http') && !introImage.startsWith('/uploads')) {
+          introImage = `${process.env.NEXT_PUBLIC_API_URL}/uploads/${introImage}`;
+        } else if (introImage && !introImage.startsWith('http')) {
+          introImage = `${process.env.NEXT_PUBLIC_API_URL}${introImage}`;
+        }
+        savedScenes.unshift({
+          id: 'virtual_intro',
+          title: '소개',
+          description: '',
+          order_index: -1,
+          background_image: introImage,
+          background_color: '#ffffff',
+          layout_type: 'image_text',
+          content: roomInfo.intro_content || '',
+        });
+      }
+
+      // Fix background_image for all scenes (DB scenes)
+      savedScenes = savedScenes.map(scene => {
+        if (scene.background_image && !scene.background_image.startsWith('http') && !scene.background_image.startsWith('/uploads')) {
+          return { ...scene, background_image: `${process.env.NEXT_PUBLIC_API_URL}/uploads/${scene.background_image}` };
+        } else if (scene.background_image && !scene.background_image.startsWith('http')) {
+          return { ...scene, background_image: `${process.env.NEXT_PUBLIC_API_URL}${scene.background_image}` };
+        }
+        return scene;
+      });
+
+      // Sort so that the intro scene (title: '소개') is always first (in case DB에도 있음)
+      const introIndex = savedScenes.findIndex(s => s.title === '소개');
+      if (introIndex > 0) {
+        const [introScene] = savedScenes.splice(introIndex, 1);
+        savedScenes.unshift(introScene);
+      }
       setScenes(savedScenes);
     } catch (err: any) {
       setError(err.message);
@@ -190,27 +324,27 @@ export default function ScenesPage() {
   // Markdown 파싱 함수
   const parseMarkdown = (text: string) => {
     if (!text) return null;
-    
-    let html = text;
-    
+    let raw: any = text;
+    // Handle object content (e.g., { text: string })
+    if (typeof raw === 'object' && raw !== null && Object.prototype.hasOwnProperty.call(raw, 'text')) {
+      raw = raw.text;
+    }
+    if (typeof raw !== 'string') return null;
+    let html = raw;
     // 제목 파싱
     html = html.replace(/^### (.*$)/gim, '<h3 class="text-xl font-bold mt-4 mb-2">$1</h3>');
     html = html.replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold mt-6 mb-3">$1</h2>');
     html = html.replace(/^# (.*$)/gim, '<h1 class="text-3xl font-bold mt-8 mb-4">$1</h1>');
-    
     // 굵게, 기울임, 밑줄
     html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold">$1</strong>');
     html = html.replace(/\*(.+?)\*/g, '<em class="italic">$1</em>');
     html = html.replace(/__(.+?)__/g, '<u class="underline">$1</u>');
-    
     // 목록
     html = html.replace(/^\* (.+)$/gim, '<li class="ml-4">• $1</li>');
     html = html.replace(/^- (.+)$/gim, '<li class="ml-4">• $1</li>');
-    
     // 줄바꿈
     html = html.replace(/\n/g, '<br />');
-    
     return <div dangerouslySetInnerHTML={{ __html: html }} />;
   };
 
@@ -218,58 +352,152 @@ export default function ScenesPage() {
   useEffect(() => {
     if (previewMode && scenes.length > 0) {
       const fetchAllSceneContents = async () => {
-        console.log('🔍 미리보기 모드 활성화 - content 불러오기 시작');
         const token = localStorage.getItem('token');
         const updatedScenes = await Promise.all(
           scenes.map(async (scene) => {
             // 임시저장이거나 draft ID를 가진 scene은 API 호출 건너뛰기
-            if (scene.isDraft || scene.id.startsWith('draft_')) {
-              console.log('⏭️ 임시저장 scene 건너뛰기:', scene.id);
+            if (scene.isDraft || scene.id.startsWith('draft_') || scene.id === 'draft_temp') {
               return scene;
             }
-            
             try {
-              console.log('📡 API 호출:', `${process.env.NEXT_PUBLIC_API_URL}/api/scenes/${scene.id}`);
               const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/scenes/${scene.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
               if (response.ok) {
                 const data = await response.json();
-                console.log('✅ Scene 데이터 받음:', {
-                  id: scene.id,
-                  title: data.scene?.title,
-                  content: data.scene?.content ? `${data.scene.content.substring(0, 50)}...` : '없음',
-                  background_image: data.scene?.background_image ? 'SVG 데이터 있음' : '없음',
-                  layout_type: data.scene?.layout_type
-                });
                 return { 
                   ...scene, 
                   content: data.scene?.content || '',
                   background_image: data.scene?.background_image || scene.background_image,
                   layout_type: data.scene?.layout_type || scene.layout_type
                 };
-              } else {
-                console.warn(`⚠️ Scene ${scene.id} 로드 실패 (${response.status})`);
               }
             } catch (err) {
-              console.error(`❌ Failed to fetch content for scene ${scene.id}:`, err);
+              // silently skip error
             }
             return scene;
           })
         );
-        console.log('🎬 업데이트된 scenes 배열:', updatedScenes.map(s => ({
-          id: s.id,
-          title: s.title,
-          hasContent: !!s.content,
-          hasImage: !!s.background_image,
-          layout_type: s.layout_type
-        })));
         setScenes(updatedScenes);
       };
-      
       fetchAllSceneContents();
     }
   }, [previewMode]);
+
+  useEffect(() => {
+    if (newQuestions.length === 0) {
+      setQuestionBuilderLocked(false);
+    }
+  }, [newQuestions.length]);
+
+  const createQuestionTemplate = (type: string = 'multiple_choice') => ({
+    title: '',
+    type,
+    description: '',
+    answer: '',
+    hint: '',
+    points: 10
+  });
+
+  const handleQuestionTypeSelect = (type: string) => {
+    setNewQuestions([createQuestionTemplate(type)]);
+    setShowQuestionTypeSelector(false);
+    setQuestionBuilderLocked(true);
+  };
+
+  const handleAddNewQuestionAfterExisting = () => {
+    setNewQuestions(prev => [...prev, createQuestionTemplate()]);
+  };
+
+  const resolveImageUrl = (value: string) => {
+    if (!value) return '';
+    if (value.startsWith('data:') || value.startsWith('blob:') || value.startsWith('http')) {
+      return value;
+    }
+    return `${process.env.NEXT_PUBLIC_API_URL}${value}`;
+  };
+
+  // 기존 이미지가 있으면 모달 열릴 때 미리보기 세팅, 닫힐 때 초기화
+  useEffect(() => {
+    if (showCreateModal) {
+      if (newScene.background_image) {
+        setImagePreview(resolveImageUrl(newScene.background_image));
+      } else {
+        setImagePreview('');
+      }
+    } else {
+      setImagePreview('');
+      localStorage.removeItem('scene_image_preview');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCreateModal]);
+
+  // 업로드 input에서 이미지가 바뀌면 미리보기 갱신 (newScene.background_image가 바뀔 때도 반영)
+  useEffect(() => {
+    if (showCreateModal && newScene.background_image) {
+      setImagePreview(resolveImageUrl(newScene.background_image));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newScene.background_image]);
+
+  const handleSceneImageUpload = async (file: File): Promise<void> => {
+    // 1. Convert to base64 and store in localStorage for preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      setImagePreview(base64);
+      localStorage.setItem('scene_image_preview', base64);
+    };
+    reader.readAsDataURL(file);
+
+    // 2. Upload to server as before
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/image`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('이미지 업로드 실패');
+      }
+
+      const data = await response.json();
+      setNewScene(prev => ({ ...prev, background_image: data.url }));
+      setImagePreview(data.preview || resolveImageUrl(data.url));
+      localStorage.removeItem('scene_image_preview');
+    } catch (err: any) {
+      setError(err.message || '이미지 업로드 중 오류가 발생했습니다.');
+      setImagePreview('');
+      localStorage.removeItem('scene_image_preview');
+    }
+  };
+
+  const renderImagePreview = () => {
+    // 1. Try localStorage preview first (if exists and not yet uploaded)
+    let previewUrl = imagePreview;
+    const localPreview = localStorage.getItem('scene_image_preview');
+    if (localPreview) previewUrl = localPreview;
+    if (!previewUrl) return null;
+
+    return (
+      <div className="mt-3">
+        <p className="text-xs text-gray-500 mb-1">이미지 미리보기</p>
+        <div className="w-full h-44 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+          <div
+            className="w-full h-full bg-cover bg-center"
+            style={{ backgroundImage: `url('${previewUrl}')` }}
+          />
+        </div>
+      </div>
+    );
+  };
 
   const handleCreateScene = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,7 +519,7 @@ export default function ScenesPage() {
           background_color: newScene.background_color,
           background_image: newScene.background_image,
           layout_type: newScene.layout_type,
-          content: newScene.content // 문자열로 전송
+          content: newScene.content ? JSON.stringify({ text: newScene.content }) : JSON.stringify({ text: '' })
         }),
       });
 
@@ -328,6 +556,7 @@ export default function ScenesPage() {
       }
 
       setShowCreateModal(false);
+      localStorage.removeItem('scene_image_preview');
       setNewScene({
         title: '',
         description: '',
@@ -348,26 +577,77 @@ export default function ScenesPage() {
   };
 
   const handleDeleteScene = async (sceneId: string) => {
-    if (!confirm('이 화면을 삭제하시겠습니까?')) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/scenes/${sceneId}`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to delete scene');
-      }
-
-      fetchScenes();
-    } catch (err: any) {
-      setError(err.message);
+    // Custom confirm dialog with copyable '삭제' text
+    let confirmed = false;
+    const confirmDiv = document.createElement('div');
+    confirmDiv.style.position = 'fixed';
+    confirmDiv.style.left = '0';
+    confirmDiv.style.top = '0';
+    confirmDiv.style.width = '100vw';
+    confirmDiv.style.height = '100vh';
+    confirmDiv.style.background = 'rgba(0,0,0,0.3)';
+    confirmDiv.style.display = 'flex';
+    confirmDiv.style.alignItems = 'center';
+    confirmDiv.style.justifyContent = 'center';
+    confirmDiv.style.zIndex = '9999';
+    confirmDiv.innerHTML = `
+      <div style="background:white;padding:2rem 2.5rem;border-radius:1rem;box-shadow:0 2px 16px #0002;max-width:90vw;min-width:320px;text-align:center;">
+        <div style="font-size:1.1rem;margin-bottom:1.5rem;font-weight:bold;color:#111;">이 화면을 삭제하시겠습니까?<br><span style='font-weight:bold;color:#111;'>삭제를 확인하려면 <span id="copy-delete-text" style="color:#e53e3e;cursor:pointer;text-decoration:underline;font-weight:bold;">삭제</span>를 입력하세요.</span></div>
+        <input id="delete-confirm-input" style="padding:0.5rem 1rem;border:1px solid #333;border-radius:0.5rem;width:70%;font-size:1rem;font-weight:bold;color:#111;" placeholder="삭제" />
+        <div style="margin-top:1.5rem;display:flex;gap:1rem;justify-content:center;">
+          <button id="delete-confirm-btn" style="background:#e53e3e;color:white;padding:0.5rem 1.5rem;border:none;border-radius:0.5rem;font-weight:bold;">삭제</button>
+          <button id="delete-cancel-btn" style="background:#eee;color:#111;padding:0.5rem 1.5rem;border:none;border-radius:0.5rem;font-weight:bold;">취소</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(confirmDiv);
+    const input = confirmDiv.querySelector('#delete-confirm-input') as HTMLInputElement;
+    const confirmBtn = confirmDiv.querySelector('#delete-confirm-btn') as HTMLButtonElement;
+    const cancelBtn = confirmDiv.querySelector('#delete-cancel-btn') as HTMLButtonElement;
+    const copyDeleteText = confirmDiv.querySelector('#copy-delete-text') as HTMLSpanElement;
+    if (copyDeleteText) {
+      copyDeleteText.addEventListener('click', () => {
+        navigator.clipboard.writeText('삭제');
+        copyDeleteText.innerText = '복사됨!';
+        setTimeout(() => { copyDeleteText.innerText = '삭제'; }, 1000);
+      });
     }
+    return new Promise<void>((resolve) => {
+      confirmBtn.onclick = async () => {
+        if (input.value.trim() === '삭제') {
+          confirmed = true;
+          document.body.removeChild(confirmDiv);
+          try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/api/scenes/${sceneId}`,
+              {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+            if (!response.ok) {
+              throw new Error('Failed to delete scene');
+            }
+            fetchScenes();
+          } catch (err: any) {
+            setError(err.message);
+          }
+          resolve();
+        } else {
+          input.style.borderColor = '#e53e3e';
+          input.focus();
+        }
+      };
+      cancelBtn.onclick = () => {
+        document.body.removeChild(confirmDiv);
+        resolve();
+      };
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') confirmBtn.click();
+      };
+      input.focus();
+    });
   };
 
   const handleOpenQuestionModal = (sceneId: string) => {
@@ -470,6 +750,15 @@ export default function ScenesPage() {
 
     try {
       const token = localStorage.getItem('token');
+      // content는 항상 JSON string으로 전송 (MySQL JSON 컬럼 호환)
+      let contentString = '';
+      if (typeof newScene.content === 'string') {
+        contentString = JSON.stringify({ text: newScene.content });
+      } else if (typeof newScene.content === 'object' && newScene.content !== null && Object.prototype.hasOwnProperty.call(newScene.content, 'text')) {
+        contentString = JSON.stringify(newScene.content);
+      } else {
+        contentString = JSON.stringify({ text: '' });
+      }
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/scenes/${editingScene.id}`, {
         method: 'PUT',
         headers: {
@@ -482,7 +771,7 @@ export default function ScenesPage() {
           background_color: newScene.background_color,
           background_image: newScene.background_image,
           layout_type: newScene.layout_type,
-          content: newScene.content // 문자열로 전송
+          content: contentString
         }),
       });
 
@@ -494,6 +783,47 @@ export default function ScenesPage() {
       setEditingScene(null);
       fetchScenes();
       alert('화면이 수정되었습니다.');
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleUpdateIntro = async (introContent: any[]) => {
+    if (!roomInfo) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+
+      // Process images in intro content (same as create page)
+      const processedIntroContent = await processIntroContentImages(introContent);
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/rooms/${roomId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          intro_content: JSON.stringify(processedIntroContent),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update intro content');
+      }
+
+      // Update local roomInfo
+      setRoomInfo({
+        ...roomInfo,
+        intro_content: JSON.stringify(processedIntroContent),
+      });
+
+      setEditIntroMode(false);
+      alert('소개 내용이 수정되었습니다.');
     } catch (err: any) {
       setError(err.message);
     }
@@ -561,7 +891,7 @@ export default function ScenesPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                게임 화면 관리 ({scenes.length}개)
+                게임 컨텐츠 관리 ({scenes.length}개)
               </h1>
               <p className="text-sm text-gray-600 mt-1">
                 플레이 순서대로 화면을 구성하세요
@@ -582,12 +912,37 @@ export default function ScenesPage() {
                 {previewMode ? '편집 모드' : '👁️ 미리보기'}
               </button>
               {!previewMode && (
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
-                >
-                  ➕ 새 화면 추가
-                </button>
+                <>
+                  {scenes.length === 0 ? (
+                    <button
+                      onClick={() => {
+                        setSelectedSceneId("");
+                        setNewScene({
+                          title: roomInfo?.title || '',
+                          description: '',
+                          background_color: '#ffffff',
+                          layout_type: '',
+                          background_image: '',
+                          content: roomInfo?.intro_content || ''
+                        });
+                        setShowCreateModal(true);
+                      }}
+                      className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
+                    >
+                      ➕ 새 화면 만들기
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setSelectedSceneId("");
+                        setShowCreateModal(true);
+                      }}
+                      className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
+                    >
+                      ➕ 새 화면 추가 (맨 뒤에)
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -600,8 +955,11 @@ export default function ScenesPage() {
 
           {scenes.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
-              <p className="text-lg mb-2">아직 화면이 없습니다</p>
-              <p className="text-sm">화면을 추가하여 게임 스토리를 구성하세요!</p>
+              <div>
+                <p className="text-lg mb-2">아직 화면이 없습니다</p>
+                <p className="text-sm">화면을 추가하여 게임 스토리를 구성하세요!</p>
+                {/* 여기에 원하는 추가 내용을 넣을 수 있습니다 */}
+              </div>
             </div>
           ) : previewMode ? (
             /* 미리보기 모드 */
@@ -631,27 +989,18 @@ export default function ScenesPage() {
 
               {/* 현재 화면 미리보기 */}
               <div className="bg-white border-2 border-indigo-200 rounded-xl overflow-hidden">
-                {console.log('🎨 렌더링 중인 Scene:', {
-                  index: currentPreviewIndex,
-                  title: scenes[currentPreviewIndex]?.title,
-                  background_image: scenes[currentPreviewIndex]?.background_image ? '있음' : '없음',
-                  background_color: scenes[currentPreviewIndex]?.background_color,
-                  layout_type: scenes[currentPreviewIndex]?.layout_type,
-                  content: scenes[currentPreviewIndex]?.content ? `${scenes[currentPreviewIndex].content.substring(0, 50)}...` : '없음',
-                  hasContent: !!scenes[currentPreviewIndex]?.content,
-                  contentLength: scenes[currentPreviewIndex]?.content?.length || 0
-                })}
+                {/* (console.log removed) */}
                 <div
                   className="h-96 flex items-center justify-center text-9xl relative"
                   style={{
                     backgroundColor: scenes[currentPreviewIndex].background_color,
-                    backgroundImage: scenes[currentPreviewIndex].background_image 
-                      ? `url(${
-                          scenes[currentPreviewIndex].background_image.startsWith('data:') 
-                            ? scenes[currentPreviewIndex].background_image 
-                            : `${process.env.NEXT_PUBLIC_API_URL}${scenes[currentPreviewIndex].background_image}`
-                        })` 
-                      : 'none',
+                      backgroundImage: scenes[currentPreviewIndex].background_image 
+                        ? `url(${
+                            scenes[currentPreviewIndex].background_image.startsWith('http') || scenes[currentPreviewIndex].background_image.startsWith('data:')
+                              ? scenes[currentPreviewIndex].background_image 
+                              : `${process.env.NEXT_PUBLIC_API_URL}${scenes[currentPreviewIndex].background_image}`
+                          })` 
+                        : 'none',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center'
                   }}
@@ -671,6 +1020,9 @@ export default function ScenesPage() {
                     <div className="flex items-center gap-3">
                       <h2 className="text-3xl font-bold text-gray-900">
                         {scenes[currentPreviewIndex].title}
+                        {scenes[currentPreviewIndex].title === '소개' && (
+                          <span className="ml-3 text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full font-semibold align-middle">소개 페이지</span>
+                        )}
                       </h2>
                       {scenes[currentPreviewIndex].isDraft && (
                         <span className="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-semibold">
@@ -683,25 +1035,20 @@ export default function ScenesPage() {
                     </span>
                   </div>
                   {scenes[currentPreviewIndex].description && (
-                    <p className="text-lg text-gray-600 mb-6">
+                    <p className="text-lg text-gray-900 font-semibold mb-6">
                       {scenes[currentPreviewIndex].description}
                     </p>
                   )}
 
                   {/* 텍스트 컨텐츠 미리보기 */}
-                  {console.log('📝 텍스트 섹션 조건 체크:', {
-                    layout_type: scenes[currentPreviewIndex].layout_type,
-                    isImageText: scenes[currentPreviewIndex].layout_type === 'image_text',
-                    hasContent: !!scenes[currentPreviewIndex].content,
-                    contentValue: scenes[currentPreviewIndex].content
-                  })}
+                  {/* (console.log removed) */}
                   {scenes[currentPreviewIndex].layout_type === 'image_text' && scenes[currentPreviewIndex].content && (
                     <div className="mt-6 p-6 bg-white border border-gray-200 rounded-lg">
                       <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <span className="text-indigo-600">📝</span>
                         텍스트 컨텐츠
                       </h3>
-                      <div className="prose prose-sm max-w-none">
+                      <div className="prose prose-sm max-w-none text-gray-900 font-semibold">
                         {parseMarkdown(scenes[currentPreviewIndex].content)}
                       </div>
                     </div>
@@ -754,17 +1101,17 @@ export default function ScenesPage() {
             /* 그리드 편집 모드 */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {scenes.map((scene, index) => (
-                <div
-                  key={scene.id}
-                  className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
-                >
+                  <div
+                    key={scene.id}
+                    className={`border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow ${selectedSceneId === scene.id ? 'ring-4 ring-indigo-400' : ''}`}
+                  >
                   <div
                     className="h-40 flex items-center justify-center text-6xl"
                     style={{
                       backgroundColor: scene.background_color,
                       backgroundImage: scene.background_image 
                         ? `url(${
-                            scene.background_image.startsWith('data:') 
+                            scene.background_image.startsWith('http') || scene.background_image.startsWith('data:')
                               ? scene.background_image 
                               : `${process.env.NEXT_PUBLIC_API_URL}${scene.background_image}`
                           })` 
@@ -783,8 +1130,88 @@ export default function ScenesPage() {
                       </span>
                     </div>
                     <h3 className="font-bold text-lg text-gray-900 mb-2">{scene.title}</h3>
+                    {scene.title === '소개' && (
+                      <span className="ml-2 text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full font-semibold align-middle">소개 페이지</span>
+                    )}
+                    {/* 소개 페이지일 때 intro_content/intro_image 미리보기 */}
+                    {scene.id === 'virtual_intro' && (
+                      <div className="mt-2">
+                        {scene.background_image && (
+                          <img src={scene.background_image.startsWith('http') || scene.background_image.startsWith('data:') ? scene.background_image : `${process.env.NEXT_PUBLIC_API_URL}${scene.background_image}`} alt="소개 이미지" className="max-h-32 rounded mb-2" />
+                        )}
+                        {scene.content && (
+                          <div className="bg-gray-50 p-2 rounded">
+                            {!editIntroMode ? (
+                              <>
+                                {(() => {
+                                  try {
+                                    const parsedContent = JSON.parse(scene.content);
+                                    return <SlatePreview content={parsedContent} />;
+                                  } catch (error) {
+                                    // Fallback to markdown parsing if JSON parsing fails
+                                    return <div className="prose prose-sm max-w-none" style={{whiteSpace:'pre-line'}}>
+                                      {parseMarkdown(scene.content)}
+                                    </div>;
+                                  }
+                                })()}
+                                <button
+                                  onClick={() => {
+                                    setEditIntroMode(true);
+                                    // 편집 모드로 전환할 때 현재 내용을 초기화
+                                    try {
+                                      const parsedContent = scene.content ? JSON.parse(scene.content) : [{ type: 'paragraph', children: [{ text: '' }] }];
+                                      setEditedIntroContent(parsedContent);
+                                    } catch (error) {
+                                      setEditedIntroContent([{ type: 'paragraph', children: [{ text: '' }] }]);
+                                    }
+                                  }}
+                                  className="mt-2 px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+                                >
+                                  소개 내용 편집
+                                </button>
+                              </>
+                            ) : (
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium text-gray-700">소개 내용 편집</span>
+                                  <div className="space-x-2">
+                                    <button
+                                      onClick={() => setEditIntroMode(false)}
+                                      className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
+                                    >
+                                      취소
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        handleUpdateIntro(editedIntroContent);
+                                      }}
+                                      className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+                                    >
+                                      저장
+                                    </button>
+                                  </div>
+                                </div>
+                                {(() => {
+                                  try {
+                                    const parsedContent = JSON.parse(scene.content);
+                                    return (
+                                      <SlateEditor
+                                        value={editedIntroContent}
+                                        onChange={setEditedIntroContent}
+                                      />
+                                    );
+                                  } catch (error) {
+                                    return <div className="text-red-500">내용을 불러올 수 없습니다.</div>;
+                                  }
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {scene.description && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{scene.description}</p>
+                      <p className="text-sm text-gray-900 font-semibold mb-3 line-clamp-2">{scene.description}</p>
                     )}
                     
                     {/* 해당 화면의 문제 목록 */}
@@ -805,7 +1232,7 @@ export default function ScenesPage() {
                       </div>
                     )}
 
-                    <div className="flex gap-2 mb-2">
+                    <div className="flex gap-2 mb-2 items-center">
                       <button
                         onClick={() => handleEditScene(scene)}
                         className="flex-1 px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg font-medium"
@@ -815,6 +1242,7 @@ export default function ScenesPage() {
                       <button
                         onClick={() => handleDeleteScene(scene.id)}
                         className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                        id={`delete-btn-${scene.id}`}
                       >
                         🗑️
                       </button>
@@ -1387,14 +1815,23 @@ export default function ScenesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   화면 제목 *
                 </label>
-                <input
-                  type="text"
-                  value={newScene.title}
-                  onChange={(e) => setNewScene({ ...newScene, title: e.target.value })}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  placeholder="예: 게임 소개"
-                />
+                {scenes.length === 0 ? (
+                  <input
+                    type="text"
+                    value={newScene.title}
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={newScene.title}
+                    onChange={(e) => setNewScene({ ...newScene, title: e.target.value })}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    placeholder="예: 게임 소개"
+                  />
+                )}
               </div>
 
               <div>
@@ -1461,35 +1898,14 @@ export default function ScenesPage() {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-
-                      const formData = new FormData();
-                      formData.append('image', file);
-
-                      try {
-                        const token = localStorage.getItem('token');
-                        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/image`, {
-                          method: 'POST',
-                          headers: {
-                            Authorization: `Bearer ${token}`,
-                          },
-                          body: formData,
-                        });
-
-                        if (!response.ok) {
-                          throw new Error('이미지 업로드 실패');
-                        }
-
-                        const data = await response.json();
-                        setNewScene({ ...newScene, background_image: data.url });
-                      } catch (err: any) {
-                        setError(err.message);
-                      }
+                      await handleSceneImageUpload(file);
                     }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     JPG, PNG, GIF, SVG, WEBP (최대 10MB)
                   </p>
+                  {imagePreview && renderImagePreview()}
                 </div>
               )}
 
@@ -1613,7 +2029,7 @@ export default function ScenesPage() {
                     value={typeof newScene.content === 'string' ? newScene.content : ''}
                     onChange={(e) => setNewScene({ ...newScene, content: e.target.value })}
                     rows={10}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm text-gray-900 placeholder:text-gray-500"
                     placeholder="이미지와 함께 표시될 텍스트를 입력하세요...&#10;&#10;서식 사용법:&#10;**굵게** - 굵은 텍스트&#10;*기울임* - 기울임 텍스트&#10;__밑줄__ - 밑줄 텍스트&#10;# 제목 1&#10;## 제목 2&#10;- 목록 항목"
                   />
                   <p className="text-xs text-gray-500 mt-1">
@@ -1628,17 +2044,27 @@ export default function ScenesPage() {
                   <label className="block text-sm font-medium text-gray-700">
                     이 화면에 문제 추가 (선택사항)
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowQuestionTypeSelector(!showQuestionTypeSelector)}
-                    className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
-                  >
-                    ➕ 문제 유형 선택
-                  </button>
+                  {questionBuilderLocked ? (
+                    <button
+                      type="button"
+                      onClick={handleAddNewQuestionAfterExisting}
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                    >
+                      ➕ 새로운 문제 추가
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowQuestionTypeSelector(!showQuestionTypeSelector)}
+                      className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+                    >
+                      ➕ 문제 유형 선택
+                    </button>
+                  )}
                 </div>
 
                 {/* 문제 유형 선택 그리드 */}
-                {showQuestionTypeSelector && (
+                {showQuestionTypeSelector && !questionBuilderLocked && (
                   <div className="mb-6 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200">
                     <h3 className="text-lg font-bold text-gray-900 mb-4">📝 추가할 문제 유형을 선택하세요 (15가지)</h3>
                     
@@ -1649,17 +2075,7 @@ export default function ScenesPage() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'multiple_choice',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('multiple_choice')}
                             className="p-4 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">📝</div>
@@ -1668,17 +2084,7 @@ export default function ScenesPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'short_answer',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('short_answer')}
                             className="p-4 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">✍️</div>
@@ -1687,17 +2093,7 @@ export default function ScenesPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'true_false',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('true_false')}
                             className="p-4 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">⭕</div>
@@ -1706,17 +2102,7 @@ export default function ScenesPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'essay',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('essay')}
                             className="p-4 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">📄</div>
@@ -1732,17 +2118,7 @@ export default function ScenesPage() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'fill_blank',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('fill_blank')}
                             className="p-4 bg-white border-2 border-green-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">📋</div>
@@ -1751,17 +2127,7 @@ export default function ScenesPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'matching',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('matching')}
                             className="p-4 bg-white border-2 border-green-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">🔗</div>
@@ -1770,17 +2136,7 @@ export default function ScenesPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'ordering',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('ordering')}
                             className="p-4 bg-white border-2 border-green-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">🔢</div>
@@ -1789,17 +2145,7 @@ export default function ScenesPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'image_choice',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('image_choice')}
                             className="p-4 bg-white border-2 border-green-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">🖼️</div>
@@ -1815,17 +2161,7 @@ export default function ScenesPage() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'code',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('code')}
                             className="p-4 bg-white border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">💻</div>
@@ -1834,17 +2170,7 @@ export default function ScenesPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'puzzle',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('puzzle')}
                             className="p-4 bg-white border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">🧩</div>
@@ -1853,17 +2179,7 @@ export default function ScenesPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'drag_drop',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('drag_drop')}
                             className="p-4 bg-white border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">🎯</div>
@@ -1872,17 +2188,7 @@ export default function ScenesPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewQuestions([...newQuestions, {
-                                title: '',
-                                type: 'drawing',
-                                description: '',
-                                answer: '',
-                                hint: '',
-                                points: 10
-                              }]);
-                              setShowQuestionTypeSelector(false);
-                            }}
+                            onClick={() => handleQuestionTypeSelect('drawing')}
                             className="p-4 bg-white border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all text-left"
                           >
                             <div className="text-2xl mb-1">🎨</div>
@@ -1962,7 +2268,7 @@ export default function ScenesPage() {
                 {newQuestions.map((question, index) => (
                   <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-gray-700">문제 #{index + 1}</h4>
+                      <h4 className="font-semibold text-gray-900">문제 #{index + 1}</h4>
                       <button
                         type="button"
                         onClick={() => {
@@ -2224,35 +2530,11 @@ export default function ScenesPage() {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-
-                      const formData = new FormData();
-                      formData.append('image', file);
-
-                      try {
-                        const token = localStorage.getItem('token');
-                        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/image`, {
-                          method: 'POST',
-                          headers: {
-                            Authorization: `Bearer ${token}`,
-                          },
-                          body: formData,
-                        });
-
-                        if (!response.ok) {
-                          throw new Error('이미지 업로드 실패');
-                        }
-
-                        const data = await response.json();
-                        setNewScene({ ...newScene, background_image: data.url });
-                      } catch (err: any) {
-                        setError(err.message);
-                      }
+                      await handleSceneImageUpload(file);
                     }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   />
-                  {newScene.background_image && (
-                    <p className="text-xs text-green-600 mt-1">✓ 이미지가 설정되었습니다</p>
-                  )}
+                  {renderImagePreview()}
                 </div>
               )}
 

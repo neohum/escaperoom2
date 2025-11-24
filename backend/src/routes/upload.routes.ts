@@ -4,9 +4,9 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken } from '../middleware/auth.middleware';
-import sharp from 'sharp';
 
 const router = Router();
+const { promises: fsPromises } = fs;
 
 // 업로드 디렉토리 설정
 const uploadDir = path.join(__dirname, '../../uploads');
@@ -43,34 +43,6 @@ const upload = multer({
   }
 });
 
-// 이미지를 base64 인코딩된 SVG로 변환
-const convertImageToSvgDataUrl = async (filePath: string): Promise<string> => {
-  try {
-    // 이미지를 버퍼로 읽기
-    const imageBuffer = fs.readFileSync(filePath);
-    
-    // 이미지를 PNG로 변환하여 최적화
-    const processedBuffer = await sharp(imageBuffer)
-      .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
-      .png({ quality: 80 })
-      .toBuffer();
-    
-    // base64로 인코딩
-    const base64Image = processedBuffer.toString('base64');
-    
-    // SVG 템플릿에 이미지 임베드
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid meet">
-  <image width="100%" height="100%" xlink:href="data:image/png;base64,${base64Image}"/>
-</svg>`;
-    
-    // SVG를 base64로 인코딩하여 data URL로 반환
-    const svgBase64 = Buffer.from(svg).toString('base64');
-    return `data:image/svg+xml;base64,${svgBase64}`;
-  } catch (error) {
-    console.error('Error converting image to SVG:', error);
-    throw error;
-  }
-};
 
 // 이미지 업로드
 router.post('/image', verifyToken, upload.single('image'), async (req: Request, res: Response): Promise<void> => {
@@ -79,21 +51,15 @@ router.post('/image', verifyToken, upload.single('image'), async (req: Request, 
       res.status(400).json({ error: '파일이 업로드되지 않았습니다' });
       return;
     }
-
+    // 원본 파일을 그대로 저장하고 URL 반환
     const filePath = path.join(uploadDir, req.file.filename);
-    
-    // 이미지를 SVG data URL로 변환
-    const svgDataUrl = await convertImageToSvgDataUrl(filePath);
-    
-    // 원본 파일 삭제 (SVG data URL을 사용하므로 더 이상 필요 없음)
-    fs.unlinkSync(filePath);
-    
+    const stat = await fsPromises.stat(filePath);
     res.json({
       message: '이미지가 성공적으로 업로드되었습니다',
-      url: svgDataUrl,
+      url: `/uploads/${req.file.filename}`,
       originalName: req.file.originalname,
-      size: req.file.size,
-      mimetype: 'image/svg+xml'
+      size: stat.size,
+      mimetype: req.file.mimetype
     });
   } catch (error) {
     console.error('Upload error:', error);
@@ -109,20 +75,16 @@ router.post('/character', verifyToken, upload.single('character'), async (req: R
       return;
     }
 
+
+    // Image is saved as original file, no conversion
     const filePath = path.join(uploadDir, req.file.filename);
-    
-    // 이미지를 SVG data URL로 변환
-    const svgDataUrl = await convertImageToSvgDataUrl(filePath);
-    
-    // 원본 파일 삭제
-    fs.unlinkSync(filePath);
-    
+    const stat = await fsPromises.stat(filePath);
     res.json({
       message: '캠릭터 이미지가 성공적으로 업로드되었습니다',
-      url: svgDataUrl,
+      url: `/uploads/${req.file.filename}`,
       originalName: req.file.originalname,
-      size: req.file.size,
-      mimetype: 'image/svg+xml'
+      size: stat.size,
+      mimetype: req.file.mimetype
     });
   } catch (error) {
     console.error('Upload error:', error);
@@ -138,20 +100,16 @@ router.post('/background', verifyToken, upload.single('background'), async (req:
       return;
     }
 
+
+    // Image is saved as original file, no conversion
     const filePath = path.join(uploadDir, req.file.filename);
-    
-    // 이미지를 SVG data URL로 변환
-    const svgDataUrl = await convertImageToSvgDataUrl(filePath);
-    
-    // 원본 파일 삭제
-    fs.unlinkSync(filePath);
-    
+    const stat = await fsPromises.stat(filePath);
     res.json({
       message: '배경 이미지가 성공적으로 업로드되었습니다',
-      url: svgDataUrl,
+      url: `/uploads/${req.file.filename}`,
       originalName: req.file.originalname,
-      size: req.file.size,
-      mimetype: 'image/svg+xml'
+      size: stat.size,
+      mimetype: req.file.mimetype
     });
   } catch (error) {
     console.error('Upload error:', error);
@@ -203,4 +161,3 @@ router.delete('/:filename', verifyToken, (req: Request, res: Response): void => 
 });
 
 export default router;
-

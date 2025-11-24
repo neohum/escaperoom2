@@ -44,6 +44,8 @@
     "url": "https://github.com/your-username/escaperoom.git"
   },
   "dependencies": {
-    "nodemon": "^3.1.11"
+    "mysql2": "^3.15.3",
+    "nodemon": "^3.1.11",
+    "sequelize": "^6.37.7"
   }
 }

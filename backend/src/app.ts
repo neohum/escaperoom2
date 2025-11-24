@@ -31,6 +31,12 @@ import { setupWebSocket } from './services/websocket.service';
 
 const app: Application = express();
 const PORT = process.env.PORT || 4000;
+const DEFAULT_ALLOWED_ORIGINS = ['http://localhost:6263', 'http://localhost:3000'];
+const FRONTEND_URL = process.env.FRONTEND_URL || DEFAULT_ALLOWED_ORIGINS[0];
+const EXTRA_ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
+  : [];
+const allowedOrigins = Array.from(new Set([FRONTEND_URL, ...DEFAULT_ALLOWED_ORIGINS, ...EXTRA_ALLOWED_ORIGINS]));
 
 // Create HTTP server
 const server = createServer(app);
@@ -41,7 +47,15 @@ const wss = new WebSocketServer({ server });
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin(origin, callback) {
+    if (!origin) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
   credentials: true,
 }));
 app.use(morgan('dev'));
@@ -49,7 +63,28 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // 정적 파일 서빙 (업로드된 파일)
-app.use('/uploads', express.static('uploads'));
+// Ensure CORS headers for static files (images, SVGs)
+import path from 'path';
+const uploadsPath = path.resolve(__dirname, '../uploads');
+console.log('Static uploads path:', uploadsPath);
+app.use('/uploads',
+  cors({
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`Not allowed by CORS: ${origin}`));
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }),
+  (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    next();
+  },
+  express.static(uploadsPath)
+);
 
 // Initialize Passport
 app.use(passport.initialize());
@@ -81,6 +116,7 @@ app.use(errorHandler);
 // Start server
 async function startServer() {
   try {
+    
     // Connect to MySQL
     await connectDB();
     console.log('✅ MySQL connected');
@@ -96,6 +132,8 @@ async function startServer() {
     // Start listening
     server.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`🖥️ Frontend available at ${FRONTEND_URL}`);
+      console.log(`🌐 Allowed origins: ${allowedOrigins.join(', ')}`);
       console.log(`📡 WebSocket server running on ws://localhost:${PORT}`);
     });
   } catch (error) {
@@ -107,4 +145,3 @@ async function startServer() {
 startServer();
 
 export default app;
-

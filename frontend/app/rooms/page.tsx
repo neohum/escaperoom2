@@ -133,7 +133,7 @@ export default function RoomsPage() {
 
         {!loading && !error && rooms.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-600 text-lg">아직 게임이 없습니다.</p>
+            <p className="text-gray-600 text-lg">아직 공개된 게임 없습니다.</p>
           </div>
         )}
 

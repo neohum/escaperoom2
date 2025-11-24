@@ -296,7 +296,7 @@ export default function MyGamesPage() {
                         편집
                       </Link>
                       <Link
-                        href={`/play/${room.id}`}
+                        href={`/edit/${room.id}?preview=1`}
                         className="text-green-600 hover:text-green-900 mr-4"
                       >
                         미리보기

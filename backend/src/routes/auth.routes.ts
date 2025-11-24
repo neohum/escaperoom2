@@ -10,7 +10,7 @@ const router = Router();
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = '7d';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:6263';
 
 // Check email availability
 router.post('/check-email', async (req: Request, res: Response): Promise<void> => {
@@ -144,10 +144,10 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
     const db = getDB();
 
-    // Find user
+    // Find user by email or username
     const [users] = await db.query(
-      'SELECT id, email, password_hash, name, provider, role FROM users WHERE email = ?',
-      [email]
+      'SELECT id, email, password_hash, name, provider, role FROM users WHERE email = ? OR name = ?',
+      [email, email]
     );
 
     if (!Array.isArray(users) || users.length === 0) {
@@ -412,4 +412,3 @@ router.get('/naver/callback', async (req: Request, res: Response) => {
 });
 
 export default router;
-
