@@ -70,6 +70,7 @@ export default function ScenesPage() {
   const [loading, setLoading] = useState(true);
   const [editIntroMode, setEditIntroMode] = useState(false);
   const [editedIntroContent, setEditedIntroContent] = useState<any[]>([]);
+  const [isDev, setIsDev] = useState(false);
 
   const uploadImage = async (file: File): Promise<string> => {
     const token = localStorage.getItem('token');
@@ -199,6 +200,7 @@ export default function ScenesPage() {
     }
     const userObj = JSON.parse(userData);
     setUser(userObj);
+    setIsDev(process.env.NODE_ENV === 'development');
     if (userObj.role !== 'creator') {
       router.push('/');
       return;
@@ -911,49 +913,179 @@ export default function ScenesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 overflow-y-auto">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
+      <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
               <Link href="/" className="text-2xl font-bold text-indigo-600">
                 🎯 방탕출 교육 플랫폼
               </Link>
-              <nav className="hidden md:flex items-center gap-1">
+              {isDev && (
+                <div className="flex gap-2">
+                  <Link
+                    href="/colors"
+                    className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full hover:bg-yellow-200"
+                  >
+                    🎨 팔레트
+                  </Link>
+                  <Link
+                    href="/color-preview"
+                    className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full hover:bg-green-200"
+                  >
+                    👁️ 미리보기
+                  </Link>
+                </div>
+              )}
+            </div>
+            {user && (
+              <div className="flex items-center gap-3">
                 <Link
                   href="/my-games"
-                  className="px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
                 >
                   📋 내 컨텐츠
                 </Link>
                 <Link
                   href="/rooms"
-                  className="px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
                 >
-                  🎮 컨텐츠 목록
+                  🎮 공개된 컨텐츠 목록
                 </Link>
-              </nav>
-            </div>
-            <div className="flex items-center gap-3">
-              {user && (
-                <>
-                  <span className="hidden sm:inline-block px-4 py-2 text-sm text-gray-700 font-medium">
-                    👤 {user.username}
-                  </span>
-                  <button
-                    onClick={handleLogout}
-                    className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
-                  >
-                    로그아웃
-                  </button>
-                </>
-              )}
-            </div>
+                <button
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
+                >
+                  👤 {user.username}
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                >
+                  로그아웃
+                </button>
+              </div>
+            )}
+
           </div>
+
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="bg-white rounded-xl shadow-md p-8">
+          {/* Room Information Section */}
+          {roomInfo && (
+            <div className="mb-8 p-6 bg-gray-50 rounded-lg">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">컨텐츠 정보</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">제목</label>
+                  <p className="mt-1 text-sm text-gray-900">{roomInfo.title}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">설명</label>
+                  <p className="mt-1 text-sm text-gray-900">{roomInfo.description || '없음'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">카테고리</label>
+                  <p className="mt-1 text-sm text-gray-900">{roomInfo.category || '없음'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">대상 학년</label>
+                  <p className="mt-1 text-sm text-gray-900">{roomInfo.target_grade || '없음'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">난이도</label>
+                  <p className="mt-1 text-sm text-gray-900">{roomInfo.difficulty ? `${roomInfo.difficulty}/5` : '없음'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">플레이 시간</label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {roomInfo.play_time_min && roomInfo.play_time_max 
+                      ? `${roomInfo.play_time_min} - ${roomInfo.play_time_max}분` 
+                      : '없음'}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">플레이 모드</label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {roomInfo.play_modes ? roomInfo.play_modes.join(', ') : '없음'}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">게시 상태</label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {roomInfo.is_published ? '게시됨' : '비공개'}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">생성일</label>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {roomInfo.created_at ? new Date(roomInfo.created_at).toLocaleDateString() : '없음'}
+                  </p>
+                </div>
+              </div>
+              {roomInfo.intro_image && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">소개 이미지</label>
+                  <div className="mt-1">
+                    <img 
+                      src={roomInfo.intro_image.startsWith('http') ? roomInfo.intro_image : 
+                           roomInfo.intro_image.startsWith('/uploads/') ? `http://localhost:4000${roomInfo.intro_image}` : 
+                           `http://localhost:4000/uploads/${roomInfo.intro_image}`} 
+                      alt="소개 이미지" 
+                      className="max-h-48 rounded-lg border shadow-sm" 
+                    />
+                  </div>
+                </div>
+              )}
+              {roomInfo.intro_content && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">소개 내용</label>
+                  <div className="mt-1 text-sm text-gray-900">
+                    <SlatePreview content={(() => {
+                      try {
+                        const parsed = JSON.parse(roomInfo.intro_content);
+                        return Array.isArray(parsed) ? parsed : [{ type: 'paragraph', children: [{ text: roomInfo.intro_content }] }];
+                      } catch {
+                        return [{ type: 'paragraph', children: [{ text: roomInfo.intro_content }] }];
+                      }
+                    })()} />
+                  </div>
+                </div>
+              )}
+              {roomInfo.author && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">제작자 정보</label>
+                  <div className="mt-1 text-sm text-gray-900">
+                    <SlatePreview content={(() => {
+                      try {
+                        const parsed = JSON.parse(roomInfo.author);
+                        return Array.isArray(parsed) ? parsed : [{ type: 'paragraph', children: [{ text: roomInfo.author }] }];
+                      } catch {
+                        return [{ type: 'paragraph', children: [{ text: roomInfo.author }] }];
+                      }
+                    })()} />
+                  </div>
+                </div>
+              )}
+              {roomInfo.sponsor && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">후원자 정보</label>
+                  <div className="mt-1 text-sm text-gray-900">
+                    <SlatePreview content={(() => {
+                      try {
+                        const parsed = JSON.parse(roomInfo.sponsor);
+                        return Array.isArray(parsed) ? parsed : [{ type: 'paragraph', children: [{ text: roomInfo.sponsor }] }];
+                      } catch {
+                        return [{ type: 'paragraph', children: [{ text: roomInfo.sponsor }] }];
+                      }
+                    })()} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">

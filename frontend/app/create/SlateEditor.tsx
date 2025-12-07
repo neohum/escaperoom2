@@ -309,10 +309,10 @@ interface SlateEditorProps {
   value: ParagraphElement[];
   onChange: (value: ParagraphElement[]) => void;
   placeholder?: string;
-  height?: string;
+  minHeight?: string;
 }
 
-export default function SlateEditor({ value, onChange, placeholder, height = "300px" }: SlateEditorProps) {
+export default function SlateEditor({ value, onChange, placeholder, minHeight = "100px" }: SlateEditorProps) {
   const editor = useMemo(() => withReact(createEditor()), []);
   const [isFocused, setIsFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -408,7 +408,7 @@ export default function SlateEditor({ value, onChange, placeholder, height = "30
       <Slate
         editor={editor}
         initialValue={safeValue}
-        key={height} // Re-mount when height changes
+        key={minHeight} // Re-mount when minHeight changes
         onChange={val => {
           // 빈 값이 들어오면 항상 최소 1개 paragraph+text가 보장되도록 강제
           if (!Array.isArray(val) || val.length === 0 ||
@@ -513,7 +513,7 @@ export default function SlateEditor({ value, onChange, placeholder, height = "30
         </div>
         <Editable
           className={`px-4 py-2 focus:outline-none bg-white transition-shadow duration-150 text-gray-900 ${isFocused ? 'ring-2 ring-blue-300 shadow-lg' : 'ring-1 ring-gray-200'} rounded-b overflow-y-auto`}
-          style={{ height }}
+          style={{ minHeight }}
           placeholder={placeholder || '내용을 입력하세요...'}
           spellCheck
           autoFocus={false}

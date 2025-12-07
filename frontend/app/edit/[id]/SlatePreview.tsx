@@ -24,17 +24,17 @@ export default function SlatePreview({ content, className = '' }: SlatePreviewPr
         let imageUrl = element.url;
         console.log('SlatePreview - Original image URL:', imageUrl);
         
-        // 백엔드 URL을 API URL로 변경 (localhost:6263 사용)
-        if (imageUrl && imageUrl.startsWith('http://localhost:4000/uploads/')) {
-          imageUrl = imageUrl.replace('http://localhost:4000/uploads/', 'http://localhost:6263/uploads/');
-        } else if (imageUrl && imageUrl.startsWith('http://localhost:4000/')) {
-          imageUrl = imageUrl.replace('http://localhost:4000/', 'http://localhost:6263/');
-        } else if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads')) {
-          imageUrl = `http://localhost:6263/uploads/${imageUrl}`;
-        } else if (imageUrl && !imageUrl.startsWith('http') && imageUrl.startsWith('/uploads/')) {
-          imageUrl = `http://localhost:6263${imageUrl}`;
+        // data: URL은 그대로 사용 (base64 인코딩된 데이터)
+        if (imageUrl && imageUrl.startsWith('data:')) {
+          // data: URL 그대로 사용
+        } else if (imageUrl && imageUrl.startsWith('http://localhost:4000/uploads/')) {
+          // 이미 올바른 URL
+        } else if (imageUrl && imageUrl.startsWith('/uploads/')) {
+          // 상대 경로를 절대 URL로 변환
+          imageUrl = `http://localhost:4000${imageUrl}`;
         } else if (imageUrl && !imageUrl.startsWith('http')) {
-          imageUrl = `http://localhost:6263/uploads/${imageUrl.replace('/uploads/', '')}`;
+          // 파일명만 있는 경우 uploads 경로 추가
+          imageUrl = `http://localhost:4000/uploads/${imageUrl}`;
         }
         
         console.log('SlatePreview - Final image URL:', imageUrl);
@@ -45,14 +45,8 @@ export default function SlatePreview({ content, className = '' }: SlatePreviewPr
           className="max-h-48 my-2 rounded shadow"
           onError={(e) => {
             console.error('Image failed to load:', imageUrl, e);
-            // 폴백: 백엔드 URL 직접 사용
-            const fallbackUrl = imageUrl.startsWith('http://localhost:6263/uploads/') 
-              ? imageUrl.replace('http://localhost:6263/uploads/', 'http://localhost:6263/uploads/') 
-              : imageUrl;
-            if (e.currentTarget.src !== fallbackUrl) {
-              console.log('Trying fallback URL:', fallbackUrl);
-              e.currentTarget.src = fallbackUrl;
-            }
+            // 이미지 로드 실패 시 숨김 처리
+            e.currentTarget.style.display = 'none';
           }}
           onLoad={() => {
             console.log('Image loaded successfully:', imageUrl);

@@ -28,6 +28,7 @@ export default function MyGamesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
+  const [isDev, setIsDev] = useState(false);
 
   useEffect(() => {
     // Check if user is creator
@@ -44,8 +45,15 @@ export default function MyGamesPage() {
     }
 
     setUser(parsedUser);
+    setIsDev(process.env.NODE_ENV === 'development');
     fetchMyRooms();
   }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    router.push('/');
+  };
 
   const fetchMyRooms = async () => {
     try {
@@ -186,24 +194,61 @@ export default function MyGamesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold text-indigo-600">
-              🎯 방탕출 교육 플랫폼
-            </Link>
             <div className="flex items-center gap-4">
-              <Link
-                href="/create"
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
-              >
-                새 컨텐츠 만들기
+              <Link href="/" className="text-2xl font-bold text-indigo-600">
+                🎯 방탕출 교육 플랫폼
               </Link>
-              <span className="text-gray-600">안녕하세요, {user?.username}님</span>
+              {isDev && (
+                <div className="flex gap-2">
+                  <Link
+                    href="/colors"
+                    className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full hover:bg-yellow-200"
+                  >
+                    🎨 팔레트
+                  </Link>
+                  <Link
+                    href="/color-preview"
+                    className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full hover:bg-green-200"
+                  >
+                    👁️ 미리보기
+                  </Link>
+                </div>
+              )}
             </div>
+            {user && (
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/create"
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
+                >
+                  ➕ 새 컨텐츠 만들기
+                </Link>
+                <Link
+                  href="/rooms"
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
+                >
+                  🎮 공개된 컨텐츠 목록
+                </Link>
+                <button
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
+                >
+                  👤 {user.username}
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                >
+                  로그아웃
+                </button>
+              </div>
+            )}
+
           </div>
+
         </div>
       </header>
 

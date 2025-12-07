@@ -60,8 +60,8 @@ export default function Home() {
               )}
             </div>
             <nav className="flex gap-6 items-center">
-              <Link href="/rooms" className="text-gray-700 hover:text-indigo-600 font-medium">
-                공개된 컨텐츠 목록
+              <Link href="/rooms" className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium">
+                🎮 공개된 컨텐츠 목록
               </Link>
               {user ? (
                 <>
@@ -72,18 +72,18 @@ export default function Home() {
                   )}
                   {user.role === 'creator' && (
                     <>
-                      <Link href="/my-games" className="text-gray-700 hover:text-indigo-600 font-medium">
-                        내 컨텐츠
+                      <Link href="/my-games" className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium">
+                        📋 내 컨텐츠
                       </Link>
-                      <Link href="/create" className="text-gray-700 hover:text-indigo-600 font-medium">
-                        컨텐츠 만들기
+                      <Link href="/create" className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium">
+                        ➕ 컨텐츠 만들기
                       </Link>
                     </>
                   )}
                   <span className="text-gray-600">안녕하세요, {user.username}님</span>
                   <button
                     onClick={handleLogout}
-                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
                   >
                     로그아웃
                   </button>
@@ -92,7 +92,7 @@ export default function Home() {
                 <>
                   <Link
                     href="/login"
-                    className="text-gray-700 hover:text-indigo-600 font-medium"
+                    className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
                   >
                     로그인
                   </Link>

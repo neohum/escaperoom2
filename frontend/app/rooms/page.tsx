@@ -11,6 +11,7 @@ interface Room {
   difficulty: number;
   estimated_time: number;
   thumbnail_url: string;
+  intro_image: string;
   creator_name: string;
   question_count: number;
 }
@@ -32,6 +33,12 @@ export default function RoomsPage() {
       setUser(JSON.parse(userData));
     }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.reload();
+  };
 
   const fetchRooms = async () => {
     try {
@@ -69,7 +76,7 @@ export default function RoomsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/" className="text-2xl font-bold text-indigo-600">
                 🎯 방탕출 교육 플랫폼
@@ -91,31 +98,48 @@ export default function RoomsPage() {
                 </div>
               )}
             </div>
-            <div className="flex gap-4">
-              {user?.role === 'creator' && (
-                <>
-                  <Link
-                    href="/my-games"
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
-                  >
-                    내 컨텐츠
-                  </Link>
-                  <Link
-                    href="/create"
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
-                  >
-                    컨텐츠 만들기
-                  </Link>
-                </>
-              )}
-            </div>
+            {user && (
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/create"
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
+                >
+                  ➕ 새 컨텐츠 만들기
+                </Link>
+                <Link
+                  href="/my-games"
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
+                >
+                  📋 내 컨텐츠
+                </Link>
+                <Link
+                  href="/rooms"
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
+                >
+                  🎮 공개된 컨텐츠 목록
+                </Link>
+                <button
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
+                >
+                  👤 {user.username}
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                >
+                  로그아웃
+                </button>
+              </div>
+            )}
+
           </div>
+
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-4xl font-bold text-gray-900 mb-8">
-          컨텐츠 목록
+           공개된 컨텐츠 목록
         </h1>
 
         {loading && (
@@ -139,15 +163,16 @@ export default function RoomsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {rooms.map((room) => (
-            <Link
+            <div
               key={room.id}
-              href={`/rooms/${room.id}`}
               className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow overflow-hidden"
             >
               <div className="h-48 bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
-                {room.thumbnail_url ? (
+                {room.intro_image ? (
                   <img
-                    src={room.thumbnail_url}
+                    src={room.intro_image.startsWith('http') ? room.intro_image : 
+                         room.intro_image.startsWith('/uploads/') ? `http://localhost:4000${room.intro_image}` : 
+                         `http://localhost:4000/uploads/${room.intro_image}`}
                     alt={room.title}
                     className="w-full h-full object-cover"
                   />
@@ -177,12 +202,19 @@ export default function RoomsPage() {
                   </span>
                 </div>
 
-                <div className="flex justify-between text-sm text-gray-500">
+                <div className="flex justify-between text-sm text-gray-500 mb-4">
                   <span>⏱️ {room.estimated_time}분</span>
                   <span>📝 {room.question_count}문제</span>
                 </div>
+
+                <Link
+                  href={`/rooms/${room.id}`}
+                  className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-center block"
+                >
+                  세부정보
+                </Link>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </main>

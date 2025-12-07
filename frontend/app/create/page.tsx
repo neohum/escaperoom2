@@ -183,6 +183,8 @@ export default function CreateRoomPage() {
 
       // 2. 에디터 내용의 이미지들 처리
       const processedIntroContent = await processIntroContentImages(introContent);
+      const processedAuthorContent = await processIntroContentImages(authorContent);
+      const processedSponsorContent = await processIntroContentImages(sponsorContent);
 
       // 3. 컨텐츠 생성
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/rooms`, {
@@ -195,8 +197,8 @@ export default function CreateRoomPage() {
           ...formData,
           intro_image: uploadedImageUrl,
           intro_content: JSON.stringify(processedIntroContent),
-          author: JSON.stringify(authorContent),
-          sponsor: JSON.stringify(sponsorContent),
+          author: JSON.stringify(processedAuthorContent),
+          sponsor: JSON.stringify(processedSponsorContent),
         }),
       });
 
@@ -278,7 +280,7 @@ export default function CreateRoomPage() {
                   href="/rooms"
                   className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
                 >
-                  🎮 컨텐츠 목록
+                  🎮 공개된 컨텐츠 목록
                 </Link>
                 <button
                   className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
@@ -472,6 +474,7 @@ export default function CreateRoomPage() {
                     : [{ type: 'paragraph', children: [{ text: '' }] }]}
                   onChange={safeSetIntroContent}
                   placeholder="컨텐츠 소개, 규칙, 배경 등 자유롭게 입력하세요. (굵게, 색상, 이미지, 링크 등 지원)"
+                  minHeight="100px"
                 />
               </div>
             </div>
@@ -492,7 +495,7 @@ export default function CreateRoomPage() {
                       : [{ type: 'paragraph', children: [{ text: '' }] }]}
                     onChange={safeSetAuthorContent}
                     placeholder="제작자 이름, 역할 등 (예: 김철수 - 기획/개발)"
-                    height="100px"
+                    minHeight="100px"
                   />
                 </div>
               </div>
@@ -507,7 +510,7 @@ export default function CreateRoomPage() {
                       : [{ type: 'paragraph', children: [{ text: '' }] }]}
                     onChange={safeSetSponsorContent}
                     placeholder="후원자 이름, 기관 등 (예: ABC 교육청 - 후원)"
-                    height="100px"
+                    minHeight="100px"
                   />
                 </div>
               </div>
