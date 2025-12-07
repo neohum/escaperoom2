@@ -9,7 +9,7 @@ const router = Router();
 const { promises: fsPromises } = fs;
 
 // 업로드 디렉토리 설정
-const uploadDir = path.join(__dirname, '../../uploads');
+const uploadDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }

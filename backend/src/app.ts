@@ -75,7 +75,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 정적 파일 서빙 (업로드된 파일)
 // Ensure CORS headers for static files (images, SVGs)
 import path from 'path';
-const uploadsPath = path.resolve(__dirname, '../uploads');
+const uploadsPath = path.join(process.cwd(), 'uploads');
 console.log('Static uploads path:', uploadsPath);
 
 // Custom middleware for uploads with explicit CORS headers
