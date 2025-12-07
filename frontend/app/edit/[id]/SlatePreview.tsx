@@ -20,7 +20,44 @@ export default function SlatePreview({ content, className = '' }: SlatePreviewPr
       case 'numbered-list':
         return <ol style={alignStyle} className="list-decimal ml-6 my-2">{children}</ol>;
       case 'image':
-        return <img src={element.url} alt="" style={alignStyle} className="max-h-48 my-2 rounded shadow" />;
+        // 백엔드 API URL을 사용해서 이미지 URL 설정
+        let imageUrl = element.url;
+        console.log('SlatePreview - Original image URL:', imageUrl);
+        
+        // 백엔드 URL을 API URL로 변경 (localhost:6263 사용)
+        if (imageUrl && imageUrl.startsWith('http://localhost:4000/uploads/')) {
+          imageUrl = imageUrl.replace('http://localhost:4000/uploads/', 'http://localhost:6263/uploads/');
+        } else if (imageUrl && imageUrl.startsWith('http://localhost:4000/')) {
+          imageUrl = imageUrl.replace('http://localhost:4000/', 'http://localhost:6263/');
+        } else if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads')) {
+          imageUrl = `http://localhost:6263/uploads/${imageUrl}`;
+        } else if (imageUrl && !imageUrl.startsWith('http') && imageUrl.startsWith('/uploads/')) {
+          imageUrl = `http://localhost:6263${imageUrl}`;
+        } else if (imageUrl && !imageUrl.startsWith('http')) {
+          imageUrl = `http://localhost:6263/uploads/${imageUrl.replace('/uploads/', '')}`;
+        }
+        
+        console.log('SlatePreview - Final image URL:', imageUrl);
+        return <img 
+          src={imageUrl} 
+          alt="" 
+          style={alignStyle} 
+          className="max-h-48 my-2 rounded shadow"
+          onError={(e) => {
+            console.error('Image failed to load:', imageUrl, e);
+            // 폴백: 백엔드 URL 직접 사용
+            const fallbackUrl = imageUrl.startsWith('http://localhost:6263/uploads/') 
+              ? imageUrl.replace('http://localhost:6263/uploads/', 'http://localhost:6263/uploads/') 
+              : imageUrl;
+            if (e.currentTarget.src !== fallbackUrl) {
+              console.log('Trying fallback URL:', fallbackUrl);
+              e.currentTarget.src = fallbackUrl;
+            }
+          }}
+          onLoad={() => {
+            console.log('Image loaded successfully:', imageUrl);
+          }}
+        />;
       default:
         return <p style={alignStyle}>{children}</p>;
     }
@@ -60,7 +97,7 @@ export default function SlatePreview({ content, className = '' }: SlatePreviewPr
   };
 
   return (
-    <div className={`prose prose-gray max-w-none ${className}`}>
+    <div className={`prose max-w-none ${className}`}>
       {renderContent(content)}
     </div>
   );

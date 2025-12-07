@@ -164,7 +164,7 @@ export default function AdminDashboard() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              🎮 게임 관리
+              🎮 컨텐츠 관리
             </button>
           </nav>
         </div>
@@ -189,7 +189,7 @@ export default function AdminDashboard() {
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">전체 게임</p>
+                    <p className="text-sm text-gray-600 mb-1">전체 컨텐츠</p>
                     <p className="text-3xl font-bold text-gray-900">{stats?.totalRooms || 0}</p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">공개된 게임</p>
+                    <p className="text-sm text-gray-600 mb-1">공개된 컨텐츠</p>
                     <p className="text-3xl font-bold text-gray-900">{stats?.publishedRooms || 0}</p>
                   </div>
                   <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
@@ -222,9 +222,9 @@ export default function AdminDashboard() {
                   </p>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 mb-2">🎮 게임 관리</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">🎮 컨텐츠 관리</h3>
                   <p className="text-sm text-gray-600">
-                    모든 게임 조회, 승인/거부, 삭제
+                    모든 컨텐츠 조회, 승인/거부, 삭제
                   </p>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-lg">
@@ -263,12 +263,12 @@ export default function AdminDashboard() {
         {activeTab === 'rooms' && (
           <div className="bg-white rounded-lg shadow">
             <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">게임 목록</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">컨텐츠 목록</h2>
               <p className="text-gray-600 mb-4">
-                API 엔드포인트 구현 후 게임 목록이 표시됩니다.
+                API 엔드포인트 구현 후 컨텐츠 목록이 표시됩니다.
               </p>
               <div className="text-sm text-gray-500">
-                예정 기능: 게임 조회, 승인/거부, 삭제, 통계
+                예정 기능: 컨텐츠 조회, 승인/거부, 삭제, 통계
               </div>
             </div>
           </div>

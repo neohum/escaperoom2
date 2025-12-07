@@ -332,7 +332,7 @@ INSERT INTO rooms (title, subtitle, description, difficulty, category, is_publis
 VALUES (
   '산으로 간 물고기',
   '역사 교육 방탕출',
-  '의병 활동에 대해 배우는 교육용 게임',
+  '의병 활동에 대해 배우는 교육용 컨텐츠',
   3,
   '역사',
   true
@@ -368,12 +368,12 @@ VALUES (
 );
 ```
 
-#### 3. 첫 게임 플레이
+#### 3. 첫 컨텐츠 플레이
 
 1. http://localhost:3000/play 접속
-2. 게임 선택
+2. 컨텐츠 선택
 3. 플레이 모드 선택 (온라인/현장/출력물)
-4. 게임 시작!
+4. 컨텐츠 시작!
 
 ---
 

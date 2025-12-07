@@ -6,7 +6,7 @@ export type HeadingElement = { type: 'heading'; align?: 'left' | 'center' | 'rig
 export type BlockQuoteElement = { type: 'block-quote'; align?: 'left' | 'center' | 'right' | 'justify'; children: CustomText[] };
 export type BulletedListElement = { type: 'bulleted-list'; align?: 'left' | 'center' | 'right' | 'justify'; children: CustomText[] };
 export type NumberedListElement = { type: 'numbered-list'; align?: 'left' | 'center' | 'right' | 'justify'; children: CustomText[] };
-export type ImageElement = { type: 'image'; url: string; imageId?: string; align?: 'left' | 'center' | 'right' | 'justify'; children: CustomText[] };
+export type ImageElement = { type: 'image'; url: string; imageId?: string; width?: number; height?: number; align?: 'left' | 'center' | 'right' | 'justify'; children: CustomText[] };
 export type CustomElement = ParagraphElement | HeadingElement | BlockQuoteElement | BulletedListElement | NumberedListElement | ImageElement;
 
 export type CustomText = {

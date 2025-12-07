@@ -13,7 +13,7 @@ router.get('/', optionalAuth, async (_req: Request, res: Response): Promise<void
       SELECT r.id, r.title, r.description, r.category, r.target_grade,
              r.difficulty, r.play_modes, r.play_time_min, r.play_time_max, r.thumbnail,
              r.created_at, u.name as creator_name,
-             r.intro_content, r.intro_image,
+             r.intro_content, r.intro_image, r.author, r.sponsor,
              (SELECT COUNT(*) FROM questions WHERE room_id = r.id) as question_count
       FROM rooms r
       LEFT JOIN users u ON r.creator_id = u.id
@@ -33,13 +33,17 @@ router.get('/', optionalAuth, async (_req: Request, res: Response): Promise<void
 router.get('/my/rooms', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as AuthRequest).userId;
+    console.log('DEBUG: /api/rooms/my/rooms called');
+    console.log('DEBUG: userId from token:', userId);
+    console.log('DEBUG: full req.user:', (req as AuthRequest));
+
     const db = getDB();
 
     const [rooms] = await db.query(`
       SELECT r.id, r.title, r.description, r.category, r.target_grade,
              r.difficulty, r.play_modes, r.play_time_min, r.play_time_max, r.thumbnail,
              r.is_published, r.created_at, r.updated_at,
-             r.intro_content, r.intro_image,
+             r.intro_content, r.intro_image, r.author, r.sponsor,
              (SELECT COUNT(*) FROM questions WHERE room_id = r.id) as question_count
       FROM rooms r
       WHERE r.creator_id = ?
@@ -106,7 +110,9 @@ router.post('/', verifyToken, async (req: Request, res: Response): Promise<void>
       credits,
       donation_info,
       intro_content,
-      intro_image
+      intro_image,
+      author,
+      sponsor
     } = req.body;
 
     if (!title) {
@@ -121,13 +127,13 @@ router.post('/', verifyToken, async (req: Request, res: Response): Promise<void>
     await db.query(`
       INSERT INTO rooms (
         id, title, description, category, target_grade, difficulty,
-        play_modes, play_time_min, play_time_max, creator_id, edit_token, credits, donation_info, intro_content, intro_image
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        play_modes, play_time_min, play_time_max, creator_id, edit_token, credits, donation_info, intro_content, intro_image, author, sponsor
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       roomId, title, description || null, category || null, target_grade || null,
       difficulty || 3, JSON.stringify(play_modes || ['online']), play_time_min || 30, play_time_max || 60,
       userId, editToken, JSON.stringify(credits || {}), JSON.stringify(donation_info || {}),
-      intro_content || null, intro_image || null
+      intro_content || null, intro_image || null, author || null, sponsor || null
     ]);
 
     // Create default scene for intro

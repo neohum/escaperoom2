@@ -9,8 +9,26 @@ import SlateEditor from '../../create/SlateEditor';
 interface RoomInfo {
   id: string;
   title: string;
+  description?: string;
+  thumbnail?: string;
+  creator_id?: string;
+  creator_email?: string;
+  edit_token?: string;
+  play_modes?: string[];
+  play_time_min?: number;
+  play_time_max?: number;
+  difficulty?: number;
+  category?: string;
+  target_grade?: string;
+  credits?: any;
+  donation_info?: any;
+  is_published?: boolean;
+  created_at?: string;
+  updated_at?: string;
   intro_content?: string;
   intro_image?: string;
+  author?: string;
+  sponsor?: string;
 }
 interface Scene {
   id: string;
@@ -20,7 +38,7 @@ interface Scene {
   background_image: string;
   background_color: string;
   layout_type: string;
-  content?: string;
+  content?: any;
   isDraft?: boolean;
 }
 
@@ -108,6 +126,28 @@ export default function ScenesPage() {
       })
     );
     return processedContent;
+  };
+
+  const processContentImages = (content: any[]): any[] => {
+    if (!content) return [];
+    
+    return content.map(element => {
+      if (element.type === 'image' && element.url) {
+        let imageUrl = element.url;
+        console.log('processContentImages - Original URL:', imageUrl);
+        if (imageUrl && imageUrl.startsWith('http://localhost:4000/uploads/')) {
+          // 백엔드 URL을 프론트엔드 상대 경로로 변경
+          imageUrl = imageUrl.replace('http://localhost:4000/uploads/', '/uploads/');
+        } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/uploads')) {
+          imageUrl = `/uploads/${imageUrl}`;
+        } else if (!imageUrl.startsWith('http')) {
+          imageUrl = `/uploads/${imageUrl.replace('/uploads/', '')}`;
+        }
+        console.log('processContentImages - Processed URL:', imageUrl);
+        return { ...element, url: imageUrl };
+      }
+      return element;
+    });
   };
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
@@ -259,24 +299,25 @@ export default function ScenesPage() {
       }
 
       // Always prepend virtual intro scene if roomInfo has intro_content or intro_image
-      if (roomInfo && (roomInfo.intro_content || roomInfo.intro_image)) {
-        let introImage = roomInfo.intro_image || '';
-        if (introImage && !introImage.startsWith('http') && !introImage.startsWith('/uploads')) {
-          introImage = `${process.env.NEXT_PUBLIC_API_URL}/uploads/${introImage}`;
-        } else if (introImage && !introImage.startsWith('http')) {
-          introImage = `${process.env.NEXT_PUBLIC_API_URL}${introImage}`;
-        }
-        savedScenes.unshift({
-          id: 'virtual_intro',
-          title: '소개',
-          description: '',
-          order_index: -1,
-          background_image: introImage,
-          background_color: '#ffffff',
-          layout_type: 'image_text',
-          content: roomInfo.intro_content || '',
-        });
-      }
+      // (이제 실제 scene으로 생성되므로 virtual_intro는 제거됨)
+      // if (roomInfo && (roomInfo.intro_content || roomInfo.intro_image)) {
+      //   let introImage = roomInfo.intro_image || '';
+      //   if (introImage && !introImage.startsWith('http') && !introImage.startsWith('/uploads')) {
+      //     introImage = `${process.env.NEXT_PUBLIC_API_URL}/uploads/${introImage}`;
+      //   } else if (introImage && !introImage.startsWith('http')) {
+      //     introImage = `${process.env.NEXT_PUBLIC_API_URL}${introImage}`;
+      //   }
+      //   savedScenes.unshift({
+      //     id: 'virtual_intro',
+      //     title: '시작',
+      //     description: '',
+      //     order_index: -1,
+      //     background_image: introImage,
+      //     background_color: '#ffffff',
+      //     layout_type: 'full_image',
+      //     content: roomInfo.intro_content || '',
+      //   });
+      // }
 
       // Fix background_image for all scenes (DB scenes)
       savedScenes = savedScenes.map(scene => {
@@ -288,12 +329,21 @@ export default function ScenesPage() {
         return scene;
       });
 
-      // Sort so that the intro scene (title: '소개') is always first (in case DB에도 있음)
-      const introIndex = savedScenes.findIndex(s => s.title === '소개');
+      // Sort so that the intro scene (title: '시작') is always first (in case DB에도 있음)
+      const introIndex = savedScenes.findIndex(s => s.title === '시작');
       if (introIndex > 0) {
         const [introScene] = savedScenes.splice(introIndex, 1);
         savedScenes.unshift(introScene);
       }
+
+      // 첫 번째 scene의 content를 roomInfo의 intro_content로 설정
+      if (savedScenes.length > 0 && roomInfo?.intro_content) {
+        savedScenes[0].content = roomInfo.intro_content;
+      }
+
+      // "소개"라는 제목의 scene은 표시하지 않음 (중복 방지)
+      savedScenes = savedScenes.filter(scene => scene.title !== '소개');
+
       setScenes(savedScenes);
     } catch (err: any) {
       setError(err.message);
@@ -365,9 +415,10 @@ export default function ScenesPage() {
               });
               if (response.ok) {
                 const data = await response.json();
+                const processedContent = processContentImages(data.scene?.content || []);
                 return { 
                   ...scene, 
-                  content: data.scene?.content || '',
+                  content: processedContent,
                   background_image: data.scene?.background_image || scene.background_image,
                   layout_type: data.scene?.layout_type || scene.layout_type
                 };
@@ -577,6 +628,13 @@ export default function ScenesPage() {
   };
 
   const handleDeleteScene = async (sceneId: string) => {
+    // 첫 번째 scene인지 확인
+    const sceneToDelete = scenes.find(scene => scene.id === sceneId);
+    if (sceneToDelete && sceneToDelete.order_index === 0) {
+      alert('시작 페이지는 삭제할 수 없습니다.');
+      return;
+    }
+
     // Custom confirm dialog with copyable '삭제' text
     let confirmed = false;
     const confirmDiv = document.createElement('div');
@@ -801,14 +859,21 @@ export default function ScenesPage() {
       // Process images in intro content (same as create page)
       const processedIntroContent = await processIntroContentImages(introContent);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/rooms/${roomId}`, {
+      // 첫 번째 scene (order_index === 0)을 찾아서 업데이트
+      const firstScene = scenes.find(scene => scene.order_index === 0);
+      if (!firstScene) {
+        alert('시작 페이지를 찾을 수 없습니다.');
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/scenes/${firstScene.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          intro_content: JSON.stringify(processedIntroContent),
+          content: JSON.stringify(processedIntroContent),
         }),
       });
 
@@ -816,14 +881,15 @@ export default function ScenesPage() {
         throw new Error('Failed to update intro content');
       }
 
-      // Update local roomInfo
-      setRoomInfo({
-        ...roomInfo,
-        intro_content: JSON.stringify(processedIntroContent),
-      });
+      // Update local scenes
+      setScenes(scenes.map(scene =>
+        scene.id === firstScene.id
+          ? { ...scene, content: JSON.stringify(processedIntroContent) }
+          : scene
+      ));
 
       setEditIntroMode(false);
-      alert('소개 내용이 수정되었습니다.');
+      alert('내용이 수정되었습니다.');
     } catch (err: any) {
       setError(err.message);
     }
@@ -857,13 +923,13 @@ export default function ScenesPage() {
                   href="/my-games"
                   className="px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg font-medium transition-colors"
                 >
-                  📋 내 게임
+                  📋 내 컨텐츠
                 </Link>
                 <Link
                   href="/rooms"
                   className="px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg font-medium transition-colors"
                 >
-                  🎮 게임 목록
+                  🎮 컨텐츠 목록
                 </Link>
               </nav>
             </div>
@@ -891,7 +957,7 @@ export default function ScenesPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                게임 컨텐츠 관리 ({scenes.length}개)
+                컨텐츠 컨텐츠 관리 ({scenes.length}개)
               </h1>
               <p className="text-sm text-gray-600 mt-1">
                 플레이 순서대로 화면을 구성하세요
@@ -957,7 +1023,7 @@ export default function ScenesPage() {
             <div className="text-center py-12 text-gray-500">
               <div>
                 <p className="text-lg mb-2">아직 화면이 없습니다</p>
-                <p className="text-sm">화면을 추가하여 게임 스토리를 구성하세요!</p>
+                <p className="text-sm">화면을 추가하여 컨텐츠 스토리를 구성하세요!</p>
                 {/* 여기에 원하는 추가 내용을 넣을 수 있습니다 */}
               </div>
             </div>
@@ -1020,9 +1086,7 @@ export default function ScenesPage() {
                     <div className="flex items-center gap-3">
                       <h2 className="text-3xl font-bold text-gray-900">
                         {scenes[currentPreviewIndex].title}
-                        {scenes[currentPreviewIndex].title === '소개' && (
-                          <span className="ml-3 text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full font-semibold align-middle">소개 페이지</span>
-                        )}
+
                       </h2>
                       {scenes[currentPreviewIndex].isDraft && (
                         <span className="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-semibold">
@@ -1042,14 +1106,14 @@ export default function ScenesPage() {
 
                   {/* 텍스트 컨텐츠 미리보기 */}
                   {/* (console.log removed) */}
-                  {scenes[currentPreviewIndex].layout_type === 'image_text' && scenes[currentPreviewIndex].content && (
+                  {scenes[currentPreviewIndex].layout_type === 'full_image' && scenes[currentPreviewIndex].content && (
                     <div className="mt-6 p-6 bg-white border border-gray-200 rounded-lg">
                       <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <span className="text-indigo-600">📝</span>
                         텍스트 컨텐츠
                       </h3>
                       <div className="prose prose-sm max-w-none text-gray-900 font-semibold">
-                        {parseMarkdown(scenes[currentPreviewIndex].content)}
+                        <SlatePreview content={scenes[currentPreviewIndex].content || []} />
                       </div>
                     </div>
                   )}
@@ -1109,112 +1173,198 @@ export default function ScenesPage() {
                     className="h-40 flex items-center justify-center text-6xl"
                     style={{
                       backgroundColor: scene.background_color,
-                      backgroundImage: scene.background_image 
-                        ? `url(${
-                            scene.background_image.startsWith('http') || scene.background_image.startsWith('data:')
-                              ? scene.background_image 
-                              : `${process.env.NEXT_PUBLIC_API_URL}${scene.background_image}`
-                          })` 
-                        : 'none',
+                      backgroundImage: (() => {
+                        // 첫 번째 scene의 경우 roomInfo.intro_image 우선 사용
+                        if (scene.order_index === 0 && roomInfo?.intro_image) {
+                          const introImage = roomInfo.intro_image.startsWith('http') || roomInfo.intro_image.startsWith('data:')
+                            ? roomInfo.intro_image
+                            : `${process.env.NEXT_PUBLIC_API_URL}${roomInfo.intro_image}`;
+                          return `url(${introImage})`;
+                        }
+                        // 그 외의 경우 scene.background_image 사용
+                        return scene.background_image 
+                          ? `url(${
+                              scene.background_image.startsWith('http') || scene.background_image.startsWith('data:')
+                                ? scene.background_image 
+                                : `${process.env.NEXT_PUBLIC_API_URL}${scene.background_image}`
+                            })` 
+                          : 'none';
+                      })(),
                       backgroundSize: 'cover',
                       backgroundPosition: 'center'
                     }}
                   >
-                    {!scene.background_image && '🖼️'}
+                    {(() => {
+                      // 첫 번째 scene의 경우 roomInfo.intro_image 확인
+                      if (scene.order_index === 0 && roomInfo?.intro_image) {
+                        return null; // intro_image가 있으면 이모지 표시하지 않음
+                      }
+                      return !scene.background_image && '🖼️';
+                    })()}
                   </div>
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-semibold text-gray-500">#{index + 1}</span>
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                        {scene.layout_type}
-                      </span>
+                      <span className="text-4xl font-semibold text-gray-500">#{index + 1}</span>
                     </div>
-                    <h3 className="font-bold text-lg text-gray-900 mb-2">{scene.title}</h3>
-                    {scene.title === '소개' && (
-                      <span className="ml-2 text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full font-semibold align-middle">소개 페이지</span>
+                    {scene.title && scene.title.trim() !== '' && scene.title !== '시작' && (
+                      <h3 className="font-bold text-lg text-gray-900 mb-2">{scene.title}</h3>
                     )}
-                    {/* 소개 페이지일 때 intro_content/intro_image 미리보기 */}
-                    {scene.id === 'virtual_intro' && (
-                      <div className="mt-2">
-                        {scene.background_image && (
-                          <img src={scene.background_image.startsWith('http') || scene.background_image.startsWith('data:') ? scene.background_image : `${process.env.NEXT_PUBLIC_API_URL}${scene.background_image}`} alt="소개 이미지" className="max-h-32 rounded mb-2" />
-                        )}
-                        {scene.content && (
-                          <div className="bg-gray-50 p-2 rounded">
-                            {!editIntroMode ? (
-                              <>
-                                {(() => {
-                                  try {
-                                    const parsedContent = JSON.parse(scene.content);
-                                    return <SlatePreview content={parsedContent} />;
-                                  } catch (error) {
-                                    // Fallback to markdown parsing if JSON parsing fails
-                                    return <div className="prose prose-sm max-w-none" style={{whiteSpace:'pre-line'}}>
-                                      {parseMarkdown(scene.content)}
-                                    </div>;
-                                  }
-                                })()}
-                                <button
-                                  onClick={() => {
-                                    setEditIntroMode(true);
-                                    // 편집 모드로 전환할 때 현재 내용을 초기화
-                                    try {
-                                      const parsedContent = scene.content ? JSON.parse(scene.content) : [{ type: 'paragraph', children: [{ text: '' }] }];
-                                      setEditedIntroContent(parsedContent);
-                                    } catch (error) {
-                                      setEditedIntroContent([{ type: 'paragraph', children: [{ text: '' }] }]);
-                                    }
-                                  }}
-                                  className="mt-2 px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
-                                >
-                                  소개 내용 편집
-                                </button>
-                              </>
-                            ) : (
-                              <div className="space-y-2">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm font-medium text-gray-700">소개 내용 편집</span>
-                                  <div className="space-x-2">
-                                    <button
-                                      onClick={() => setEditIntroMode(false)}
-                                      className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
-                                    >
-                                      취소
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        handleUpdateIntro(editedIntroContent);
-                                      }}
-                                      className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
-                                    >
-                                      저장
-                                    </button>
-                                  </div>
-                                </div>
-                                {(() => {
-                                  try {
-                                    const parsedContent = JSON.parse(scene.content);
-                                    return (
-                                      <SlateEditor
-                                        value={editedIntroContent}
-                                        onChange={setEditedIntroContent}
-                                      />
-                                    );
-                                  } catch (error) {
-                                    return <div className="text-red-500">내용을 불러올 수 없습니다.</div>;
-                                  }
-                                })()}
-                              </div>
-                            )}
+
+                    {/* 첫 번째 scene에 rooms 테이블 정보 표시 */}
+                    {scene.order_index === 0 && roomInfo && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <h4 className="font-semibold text-blue-900 mb-3">컨텐츠 기본 정보</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium text-gray-700">제목:</span>
+                            <span className="ml-2 text-gray-900">{roomInfo.title}</span>
                           </div>
-                        )}
+                          {roomInfo.description && (
+                            <div>
+                              <span className="font-medium text-gray-700">설명:</span>
+                              <span className="ml-2 text-gray-900">{roomInfo.description}</span>
+                            </div>
+                          )}
+                          {roomInfo.category && (
+                            <div>
+                              <span className="font-medium text-gray-700">카테고리:</span>
+                              <span className="ml-2 text-gray-900">{roomInfo.category}</span>
+                            </div>
+                          )}
+                          {roomInfo.target_grade && (
+                            <div>
+                              <span className="font-medium text-gray-700">대상 학년:</span>
+                              <span className="ml-2 text-gray-900">{roomInfo.target_grade}</span>
+                            </div>
+                          )}
+                          <div>
+                            <span className="font-medium text-gray-700">난이도:</span>
+                            <span className="ml-2 text-gray-900">{roomInfo.difficulty}/5</span>
+                          </div>
+                          {(roomInfo.play_time_min || roomInfo.play_time_max) && (
+                            <div>
+                              <span className="font-medium text-gray-700">플레이 시간:</span>
+                              <span className="ml-2 text-gray-900">
+                                {roomInfo.play_time_min && roomInfo.play_time_max 
+                                  ? `${roomInfo.play_time_min}-${roomInfo.play_time_max}분`
+                                  : roomInfo.play_time_min 
+                                    ? `${roomInfo.play_time_min}분 이상`
+                                    : roomInfo.play_time_max 
+                                      ? `최대 ${roomInfo.play_time_max}분`
+                                      : '미정'
+                                }
+                              </span>
+                            </div>
+                          )}
+                          {roomInfo.play_modes && Array.isArray(roomInfo.play_modes) && (
+                            <div>
+                              <span className="font-medium text-gray-700">플레이 모드:</span>
+                              <span className="ml-2 text-gray-900">{roomInfo.play_modes.join(', ')}</span>
+                            </div>
+                          )}
+                          <div className="md:col-span-2">
+                            <span className="font-medium text-gray-700">크레딧:</span>
+                            <div className="ml-2 text-gray-900">
+                              {roomInfo.credits && 
+                               ((typeof roomInfo.credits === 'object' && Object.keys(roomInfo.credits).length > 0) ||
+                                (typeof roomInfo.credits === 'string' && roomInfo.credits.trim() !== ''))
+                                ? (typeof roomInfo.credits === 'string' 
+                                    ? roomInfo.credits 
+                                    : JSON.stringify(roomInfo.credits, null, 2)
+                                  )
+                                : '없음'
+                              }
+                            </div>
+                          </div>
+                          <div className="md:col-span-2">
+                            <span className="font-medium text-gray-700">후원 정보:</span>
+                            <div className="ml-2 text-gray-900">
+                              {roomInfo.donation_info && 
+                               ((typeof roomInfo.donation_info === 'object' && Object.keys(roomInfo.donation_info).length > 0) ||
+                                (typeof roomInfo.donation_info === 'string' && roomInfo.donation_info.trim() !== ''))
+                                ? (typeof roomInfo.donation_info === 'string' 
+                                    ? roomInfo.donation_info 
+                                    : JSON.stringify(roomInfo.donation_info, null, 2)
+                                  )
+                                : '없음'
+                              }
+                            </div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">게시 상태:</span>
+                            <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                              roomInfo.is_published 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {roomInfo.is_published ? '게시됨' : '비공개'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">생성일:</span>
+                            <span className="ml-2 text-gray-900">
+                              {roomInfo.created_at ? new Date(roomInfo.created_at).toLocaleDateString('ko-KR') : '알 수 없음'}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
-                    {scene.description && (
-                      <p className="text-sm text-gray-900 font-semibold mb-3 line-clamp-2">{scene.description}</p>
-                    )}
-                    
+
                     {/* 해당 화면의 문제 목록 */}
+
+                    {/* Scene content 미리보기 */}
+                    {scene.content && (
+                      <div className="bg-gray-50 p-2 rounded mb-3">
+                        {!editIntroMode || scene.order_index !== 0 ? (
+                          <>
+                            {(() => {
+                              // content가 이미 파싱된 객체면 바로 사용
+                              if (Array.isArray(scene.content)) {
+                                return <SlatePreview content={scene.content} />;
+                              }
+                              try {
+                                const parsedContent = JSON.parse(scene.content);
+                                return <SlatePreview content={parsedContent} />;
+                              } catch (error) {
+                                // Fallback to markdown parsing if JSON parsing fails
+                                return <div className="prose prose-sm max-w-none" style={{whiteSpace:'pre-line'}}>
+                                  {parseMarkdown(scene.content)}
+                                </div>;
+                              }
+                            })()}
+
+
+
+                          </>
+                        ) : scene.order_index === 0 && editIntroMode ? (
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-700">내용 편집</span>
+                              <div className="space-x-2">
+                                <button
+                                  onClick={() => setEditIntroMode(false)}
+                                  className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
+                                >
+                                  취소
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    handleUpdateIntro(editedIntroContent);
+                                  }}
+                                  className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+                                >
+                                  저장
+                                </button>
+                              </div>
+                            </div>
+                            <SlateEditor
+                              value={editedIntroContent}
+                              onChange={setEditedIntroContent}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                     {getQuestionsForScene(scene.id).length > 0 && (
                       <div className="mb-3 pb-3 border-b border-gray-200">
                         <p className="text-xs font-semibold text-gray-500 mb-2">등록된 문제:</p>
@@ -1239,22 +1389,18 @@ export default function ScenesPage() {
                       >
                         ✏️ 편집
                       </button>
-                      <button
-                        onClick={() => handleDeleteScene(scene.id)}
-                        className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg"
-                        id={`delete-btn-${scene.id}`}
-                      >
-                        🗑️
-                      </button>
+                      {scene.order_index !== 0 && (
+                        <button
+                          onClick={() => handleDeleteScene(scene.id)}
+                          className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          id={`delete-btn-${scene.id}`}
+                        >
+                          🗑️
+                        </button>
+                      )}
                     </div>
 
-                    {/* 문제 추가 버튼 */}
-                    <button
-                      onClick={() => handleOpenQuestionModal(scene.id)}
-                      className="w-full px-4 py-2 text-sm bg-green-50 text-green-700 hover:bg-green-100 rounded-lg font-medium border border-green-200"
-                    >
-                      ➕ 이 화면에 문제 추가
-                    </button>
+
                   </div>
                 </div>
               ))}
@@ -1523,9 +1669,9 @@ export default function ScenesPage() {
                     </div>
                   </div>
 
-                  {/* 게임형 문제 */}
+                  {/* 컨텐츠형 문제 */}
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">게임형 문제</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">컨텐츠형 문제</h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <button
                         type="button"
@@ -1579,7 +1725,7 @@ export default function ScenesPage() {
                       >
                         <div className="text-2xl mb-1">🃏</div>
                         <div className="font-semibold text-sm text-gray-900">카드 짝 맞추기</div>
-                        <div className="text-xs text-gray-500 mt-1">메모리 게임</div>
+                        <div className="text-xs text-gray-500 mt-1">메모리 컨텐츠</div>
                       </button>
                     </div>
                   </div>
@@ -1651,7 +1797,7 @@ export default function ScenesPage() {
                           <option value="drag_drop">🎯 드래그 앤 드롭</option>
                           <option value="drawing">🎨 그림 그리기</option>
                         </optgroup>
-                        <optgroup label="게임형 문제">
+                        <optgroup label="컨텐츠형 문제">
                           <option value="word_search">🔍 단어 찾기</option>
                           <option value="crossword">📝 십자말풀이</option>
                           <option value="memory_card">🃏 카드 짝 맞추기</option>
@@ -1829,7 +1975,7 @@ export default function ScenesPage() {
                     onChange={(e) => setNewScene({ ...newScene, title: e.target.value })}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                    placeholder="예: 게임 소개"
+                    placeholder="예: 컨텐츠 소개"
                   />
                 )}
               </div>
@@ -2198,9 +2344,9 @@ export default function ScenesPage() {
                         </div>
                       </div>
 
-                      {/* 게임형 문제 */}
+                      {/* 컨텐츠형 문제 */}
                       <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2">게임형 문제</h4>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">컨텐츠형 문제</h4>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           <button
                             type="button"
@@ -2257,7 +2403,7 @@ export default function ScenesPage() {
                           >
                             <div className="text-2xl mb-1">🃏</div>
                             <div className="font-semibold text-sm text-gray-900">카드 짝 맞추기</div>
-                            <div className="text-xs text-gray-500 mt-1">메모리 게임</div>
+                            <div className="text-xs text-gray-500 mt-1">메모리 컨텐츠</div>
                           </button>
                         </div>
                       </div>
@@ -2331,7 +2477,7 @@ export default function ScenesPage() {
                               <option value="drag_drop">🎯 드래그 앤 드롭</option>
                               <option value="drawing">🎨 그림 그리기</option>
                             </optgroup>
-                            <optgroup label="게임형 문제">
+                            <optgroup label="컨텐츠형 문제">
                               <option value="word_search">🔍 단어 찾기</option>
                               <option value="crossword">📝 십자말풀이</option>
                               <option value="memory_card">🃏 카드 짝 맞추기</option>

@@ -5,9 +5,221 @@ import {
   MdFormatAlignLeft, MdFormatAlignCenter, MdFormatAlignRight, MdFormatAlignJustify
 } from 'react-icons/md';
 import { createEditor, Editor, Transforms, Text, Element as SlateElement } from 'slate';
+import { ReactEditor } from 'slate-react';
 import type { ParagraphElement } from './slate.d';
 import { Slate, Editable, withReact } from 'slate-react';
-// 서식 토글 유틸
+
+// ResizableImage 컴포넌트
+const ResizableImage = ({ attributes, element, children, editor }: any) => {
+  const [width, setWidth] = useState(element.width || 300);
+  const [height, setHeight] = useState(element.height || 200);
+  const [isResizing, setIsResizing] = useState(false);
+  const [isSelected, setIsSelected] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  const updateSize = (newWidth: number, newHeight: number) => {
+    const clampedWidth = Math.max(50, newWidth);
+    const clampedHeight = Math.max(50, newHeight);
+    setWidth(clampedWidth);
+    setHeight(clampedHeight);
+  };
+
+  const saveSize = () => {
+    try {
+      const path = ReactEditor.findPath(editor, element);
+      Transforms.setNodes(editor, { width, height } as any, { at: path });
+    } catch (error) {
+      console.error('Failed to update image size:', error);
+    }
+  };
+
+  const handleMouseDown = (direction: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = width;
+    const startHeight = height;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+
+      switch (direction) {
+        case 'se': // 우하단
+          newWidth = startWidth + deltaX;
+          newHeight = startHeight + deltaY;
+          break;
+        case 'sw': // 좌하단
+          newWidth = startWidth - deltaX;
+          newHeight = startHeight + deltaY;
+          break;
+        case 'ne': // 우상단
+          newWidth = startWidth + deltaX;
+          newHeight = startHeight - deltaY;
+          break;
+        case 'nw': // 좌상단
+          newWidth = startWidth - deltaX;
+          newHeight = startHeight - deltaY;
+          break;
+      }
+
+      updateSize(newWidth, newHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      saveSize();
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleImageClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsSelected(!isSelected);
+  };
+
+  const handleImageMouseLeave = () => {
+    // 마우스가 이미지 밖으로 나가면 선택 해제 (선택 사항)
+    // setIsSelected(false);
+  };
+
+  const handleDelete = () => {
+    try {
+      const path = ReactEditor.findPath(editor, element);
+      Transforms.removeNodes(editor, { at: path });
+    } catch (error) {
+      console.error('Failed to delete image:', error);
+    }
+  };
+
+  return (
+    <span {...attributes} style={{ position: 'relative', display: 'inline-block', margin: '0 4px' }}>
+      <img
+        ref={imageRef}
+        src={element.url}
+        alt=""
+        onClick={handleImageClick}
+        onMouseLeave={handleImageMouseLeave}
+        style={{
+          width: `${width}px`,
+          height: `${height}px`,
+          maxWidth: '100%',
+          display: 'block',
+          border: isResizing ? '2px solid #3b82f6' : (isSelected ? '2px solid #3b82f6' : '1px solid #d1d5db'),
+          borderRadius: '4px',
+          cursor: 'pointer',
+          pointerEvents: 'auto',
+        }}
+      />
+      {/* 삭제 버튼 - 선택 상태일 때만 표시 */}
+      {isSelected && (
+        <button
+          onClick={handleDelete}
+          style={{
+            position: 'absolute',
+            top: '5px',
+            right: '5px',
+            width: '20px',
+            height: '20px',
+            backgroundColor: 'rgba(239, 68, 68, 0.8)',
+            border: 'none',
+            borderRadius: '50%',
+            color: 'white',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 15,
+          }}
+          title="이미지 삭제"
+        >
+          ✕
+        </button>
+      )}
+      {/* 크기 조정 핸들들 - 선택 상태일 때만 표시 */}
+      {isSelected && (
+        <>
+          {/* 우상단 */}
+          <div
+            onMouseDown={handleMouseDown('ne')}
+            style={{
+              position: 'absolute',
+              top: '-5px',
+              right: '-5px',
+              width: '10px',
+              height: '10px',
+              backgroundColor: '#3b82f6',
+              border: '1px solid white',
+              borderRadius: '50%',
+              cursor: 'sw-resize',
+              zIndex: 10,
+            }}
+          />
+          {/* 좌상단 */}
+          <div
+            onMouseDown={handleMouseDown('nw')}
+            style={{
+              position: 'absolute',
+              top: '-5px',
+              left: '-5px',
+              width: '10px',
+              height: '10px',
+              backgroundColor: '#3b82f6',
+              border: '1px solid white',
+              borderRadius: '50%',
+              cursor: 'se-resize',
+              zIndex: 10,
+            }}
+          />
+          {/* 우하단 */}
+          <div
+            onMouseDown={handleMouseDown('se')}
+            style={{
+              position: 'absolute',
+              bottom: '-5px',
+              right: '-5px',
+              width: '10px',
+              height: '10px',
+              backgroundColor: '#3b82f6',
+              border: '1px solid white',
+              borderRadius: '50%',
+              cursor: 'nw-resize',
+              zIndex: 10,
+            }}
+          />
+          {/* 좌하단 */}
+          <div
+            onMouseDown={handleMouseDown('sw')}
+            style={{
+              position: 'absolute',
+              bottom: '-5px',
+              left: '-5px',
+              width: '10px',
+              height: '10px',
+              backgroundColor: '#3b82f6',
+              border: '1px solid white',
+              borderRadius: '50%',
+              cursor: 'ne-resize',
+              zIndex: 10,
+            }}
+          />
+        </>
+      )}
+      {children}
+    </span>
+  );
+};
+
 const isMarkActive = (editor: Editor, format: string) => {
   const marks = Editor.marks(editor) as any;
   return marks ? marks[format] === true : false;
@@ -97,9 +309,10 @@ interface SlateEditorProps {
   value: ParagraphElement[];
   onChange: (value: ParagraphElement[]) => void;
   placeholder?: string;
+  height?: string;
 }
 
-export default function SlateEditor({ value, onChange, placeholder }: SlateEditorProps) {
+export default function SlateEditor({ value, onChange, placeholder, height = "300px" }: SlateEditorProps) {
   const editor = useMemo(() => withReact(createEditor()), []);
   const [isFocused, setIsFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -179,7 +392,7 @@ export default function SlateEditor({ value, onChange, placeholder }: SlateEdito
               localStorage.setItem(imageId, base64);
 
               // 에디터에 삽입 (base64 URL 사용)
-              const image = { type: 'image', url: base64, imageId, children: [{ text: '' }] } as any;
+              const image = { type: 'image', url: base64, imageId, width: 300, height: 200, children: [{ text: '' }] } as any;
               Transforms.insertNodes(editor, image);
             } catch (error) {
               console.error('Image processing failed:', error);
@@ -195,6 +408,7 @@ export default function SlateEditor({ value, onChange, placeholder }: SlateEdito
       <Slate
         editor={editor}
         initialValue={safeValue}
+        key={height} // Re-mount when height changes
         onChange={val => {
           // 빈 값이 들어오면 항상 최소 1개 paragraph+text가 보장되도록 강제
           if (!Array.isArray(val) || val.length === 0 ||
@@ -298,7 +512,8 @@ export default function SlateEditor({ value, onChange, placeholder }: SlateEdito
             })}
         </div>
         <Editable
-          className={`min-h-[200px] px-4 py-2 focus:outline-none bg-white transition-shadow duration-150 text-gray-900 ${isFocused ? 'ring-2 ring-blue-300 shadow-lg' : 'ring-1 ring-gray-200'} rounded-b`}
+          className={`px-4 py-2 focus:outline-none bg-white transition-shadow duration-150 text-gray-900 ${isFocused ? 'ring-2 ring-blue-300 shadow-lg' : 'ring-1 ring-gray-200'} rounded-b overflow-y-auto`}
+          style={{ height }}
           placeholder={placeholder || '내용을 입력하세요...'}
           spellCheck
           autoFocus={false}
@@ -318,15 +533,14 @@ export default function SlateEditor({ value, onChange, placeholder }: SlateEdito
                 case 'numbered-list':
                   return <ol {...props.attributes} style={alignStyle} className="list-decimal ml-6 my-2">{props.children}</ol>;
                 case 'image':
-                  // eslint-disable-next-line @next/next/no-img-element
-                  return <img {...props.attributes} src={props.element.url} alt="" style={alignStyle} className="max-h-48 my-2 rounded shadow" />;
+                  return <ResizableImage {...props} editor={editor} />;
                 default:
                   return <p {...props.attributes} style={alignStyle}>{props.children}</p>;
               }
             } catch {
               return <p {...props.attributes}>{props.children}</p>;
             }
-          }, [])}
+          }, [editor])}
           renderLeaf={useCallback((props: any) => {
             try {
               let style: React.CSSProperties = {};

@@ -35,7 +35,7 @@ export default function RoomsPage() {
 
   const fetchRooms = async () => {
     try {
-      // /rooms 페이지는 모든 사용자에게 공개된 게임만 표시
+      // /rooms 페이지는 모든 사용자에게 공개된 컨텐츠만 표시
       const url = `${process.env.NEXT_PUBLIC_API_URL}/api/rooms`;
       
       const response = await fetch(url);
@@ -98,13 +98,13 @@ export default function RoomsPage() {
                     href="/my-games"
                     className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
                   >
-                    내 게임
+                    내 컨텐츠
                   </Link>
                   <Link
                     href="/create"
                     className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
                   >
-                    게임 만들기
+                    컨텐츠 만들기
                   </Link>
                 </>
               )}
@@ -115,7 +115,7 @@ export default function RoomsPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-4xl font-bold text-gray-900 mb-8">
-          게임 목록
+          컨텐츠 목록
         </h1>
 
         {loading && (
@@ -133,7 +133,7 @@ export default function RoomsPage() {
 
         {!loading && !error && rooms.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-600 text-lg">아직 공개된 게임 없습니다.</p>
+            <p className="text-gray-600 text-lg">아직 공개된 컨텐츠 없습니다.</p>
           </div>
         )}
 

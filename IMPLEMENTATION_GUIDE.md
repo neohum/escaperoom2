@@ -19,15 +19,15 @@
   - POST /api/auth/logout - 로그아웃
   - GET /api/auth/me - 현재 사용자 정보
 - [x] **Room API** (backend/src/routes/room.routes.ts)
-  - GET /api/rooms - 공개된 게임 목록 조회
-  - GET /api/rooms/:id - 게임 상세 조회 (팀원 정보 포함)
-  - POST /api/rooms - 게임 생성 (인증 필요)
-  - PUT /api/rooms/:id - 게임 수정 (권한 확인)
-  - DELETE /api/rooms/:id - 게임 삭제 (권한 확인)
-  - POST /api/rooms/:id/publish - 게임 공개
-  - POST /api/rooms/:id/unpublish - 게임 비공개
+  - GET /api/rooms - 공개된 컨텐츠 목록 조회
+  - GET /api/rooms/:id - 컨텐츠 상세 조회 (팀원 정보 포함)
+  - POST /api/rooms - 컨텐츠 생성 (인증 필요)
+  - PUT /api/rooms/:id - 컨텐츠 수정 (권한 확인)
+  - DELETE /api/rooms/:id - 컨텐츠 삭제 (권한 확인)
+  - POST /api/rooms/:id/publish - 컨텐츠 공개
+  - POST /api/rooms/:id/unpublish - 컨텐츠 비공개
 - [x] **Question API** (backend/src/routes/question.routes.ts)
-  - GET /api/questions/room/:roomId - 게임의 모든 문제 조회
+  - GET /api/questions/room/:roomId - 컨텐츠의 모든 문제 조회
   - GET /api/questions/:id - 문제 상세 조회
   - POST /api/questions - 문제 생성 (권한 확인)
   - PUT /api/questions/:id - 문제 수정 (권한 확인)
@@ -52,10 +52,10 @@
 - [x] **인증 페이지**
   - /login - 로그인 페이지 (frontend/app/login/page.tsx)
   - /register - 회원가입 페이지 (frontend/app/register/page.tsx)
-- [x] **게임 페이지**
-  - /rooms - 게임 목록 페이지 (frontend/app/rooms/page.tsx)
-  - /rooms/[id] - 게임 상세/플레이 페이지 (frontend/app/rooms/[id]/page.tsx)
-  - /create - 게임 생성 페이지 (frontend/app/create/page.tsx)
+- [x] **컨텐츠 페이지**
+  - /rooms - 컨텐츠 목록 페이지 (frontend/app/rooms/page.tsx)
+  - /rooms/[id] - 컨텐츠 상세/플레이 페이지 (frontend/app/rooms/[id]/page.tsx)
+  - /create - 컨텐츠 생성 페이지 (frontend/app/create/page.tsx)
 - [x] **디자인 시스템**
   - /colors - 컬러 팔레트 상세 페이지 (8가지 컬러셋)
   - /color-preview - 실시간 컬러 미리보기 페이지
@@ -69,7 +69,7 @@
   - Levenshtein Distance 알고리즘 (fastest-levenshtein)
   - 주관식 답안 자동 채점 (60% 임계값)
 - [x] **권한 관리**
-  - 게임 생성자만 수정/삭제 가능
+  - 컨텐츠 생성자만 수정/삭제 가능
   - 팀원 정보 조회
 - [x] **반응형 디자인**
   - Tailwind CSS 기반
@@ -104,13 +104,13 @@
 - [ ] OAuth 연동 (Google, Kakao, Naver) - 선택사항
 
 ### Room API ✅ 완료
-- [x] GET /api/rooms - 게임 목록 조회
-- [x] GET /api/rooms/:id - 게임 상세 조회
-- [x] POST /api/rooms - 게임 생성
-- [x] PUT /api/rooms/:id - 게임 수정
-- [x] DELETE /api/rooms/:id - 게임 삭제
-- [x] POST /api/rooms/:id/publish - 게임 공개
-- [x] POST /api/rooms/:id/unpublish - 게임 비공개
+- [x] GET /api/rooms - 컨텐츠 목록 조회
+- [x] GET /api/rooms/:id - 컨텐츠 상세 조회
+- [x] POST /api/rooms - 컨텐츠 생성
+- [x] PUT /api/rooms/:id - 컨텐츠 수정
+- [x] DELETE /api/rooms/:id - 컨텐츠 삭제
+- [x] POST /api/rooms/:id/publish - 컨텐츠 공개
+- [x] POST /api/rooms/:id/unpublish - 컨텐츠 비공개
 - [ ] POST /api/rooms/:id/team - 팀원 추가/삭제 - 추가 구현 필요
 
 ### Question API ✅ 완료
@@ -122,10 +122,10 @@
 
 ### Game API 🚧 부분 완료
 - [x] 기본 라우트 파일 생성 (backend/src/routes/game.routes.ts)
-- [ ] POST /api/game/sessions - 게임 세션 시작
+- [ ] POST /api/game/sessions - 컨텐츠 세션 시작
 - [ ] POST /api/game/sessions/:id/progress - 진행 상황 저장
 - [ ] GET /api/game/sessions/:id - 세션 조회
-- [ ] POST /api/game/sessions/:id/complete - 게임 완료
+- [ ] POST /api/game/sessions/:id/complete - 컨텐츠 완료
 
 ### Upload API 🚧 스켈레톤만 존재
 - [ ] POST /api/upload/image - 이미지 업로드 + SVG 변환
@@ -171,13 +171,13 @@
   - Footer
   - 로그인 상태 관리
   - 개발 모드 바로가기
-- [x] /rooms - 게임 목록 (frontend/app/rooms/page.tsx)
+- [x] /rooms - 컨텐츠 목록 (frontend/app/rooms/page.tsx)
   - 카드 그리드 레이아웃
   - 난이도 배지
   - 카테고리 표시
   - API 연동 완료
-- [x] /rooms/[id] - 게임 상세/플레이 (frontend/app/rooms/[id]/page.tsx)
-  - 게임 정보 표시
+- [x] /rooms/[id] - 컨텐츠 상세/플레이 (frontend/app/rooms/[id]/page.tsx)
+  - 컨텐츠 정보 표시
   - 문제 목록 및 네비게이션
   - 답안 제출 기능
   - 힌트 표시
@@ -185,12 +185,12 @@
   - API 연동 완료
 
 ### 편집기 페이지 🚧 부분 완료
-- [x] /create - 게임 생성 (frontend/app/create/page.tsx)
+- [x] /create - 컨텐츠 생성 (frontend/app/create/page.tsx)
   - 제목, 설명, 카테고리 입력
   - 난이도 슬라이더
   - 예상 시간 입력
   - API 연동 완료
-- [ ] /edit/[id] - 게임 편집 ❌ 미구현
+- [ ] /edit/[id] - 컨텐츠 편집 ❌ 미구현
   - [ ] 기본 정보 편집
   - [ ] 문제 추가/수정/삭제 UI
   - [ ] 드래그 앤 드롭 순서 변경
@@ -212,13 +212,13 @@
 ### 관리자 페이지 ❌ 미구현
 - [ ] /admin - 관리자 대시보드
 - [ ] /admin/users - 사용자 관리
-- [ ] /admin/rooms - 게임 관리
+- [ ] /admin/rooms - 컨텐츠 관리
 - [ ] /admin/stats - 통계
 
 ### 마이페이지 ❌ 미구현
 - [ ] /profile - 프로필
-- [ ] /my-rooms - 내가 만든 게임
-- [ ] /my-games - 플레이한 게임
+- [ ] /my-rooms - 내가 만든 컨텐츠
+- [ ] /my-games - 플레이한 컨텐츠
 - [ ] /badges - 획득한 배지
 
 ## 3️⃣ 핵심 기능 구현
@@ -290,8 +290,8 @@ export async function generatePrintout(roomId: string): Promise<string> {
 
   doc.pipe(stream);
 
-  // 게임 정보 및 문제 추가
-  doc.fontSize(20).text('방탕출 게임', { align: 'center' });
+  // 컨텐츠 정보 및 문제 추가
+  doc.fontSize(20).text('방탕출 컨텐츠', { align: 'center' });
   // ... 문제 추가
 
   doc.end();
@@ -420,14 +420,14 @@ cd frontend && npm run dev # 프론트엔드: http://localhost:3000
    - Redis/Upstash 설정
    - 환경 변수 설정 (DB 비밀번호 등)
 
-2. **게임 편집 페이지** 🎯 중요
+2. **컨텐츠 편집 페이지** 🎯 중요
    - `/edit/[id]` 페이지 구현
    - 문제 추가/수정/삭제 UI
    - 드래그 앤 드롭 순서 변경
    - 이미지 업로드 기능
 
 3. **Game Session API** 🎯 중요
-   - 게임 세션 시작/진행/완료
+   - 컨텐츠 세션 시작/진행/완료
    - 진행 상황 저장
    - 점수 계산
 
@@ -444,14 +444,14 @@ cd frontend && npm run dev # 프론트엔드: http://localhost:3000
 
 6. **마이페이지** 👤 선택사항
    - 프로필 관리
-   - 내가 만든 게임
-   - 플레이한 게임
+   - 내가 만든 컨텐츠
+   - 플레이한 컨텐츠
    - 배지 시스템
 
 ### 우선순위 3: 운영 및 배포
 7. **관리자 페이지** 🔧 선택사항
    - 사용자 관리
-   - 게임 관리
+   - 컨텐츠 관리
    - 통계 대시보드
 
 8. **테스트** ✅ 권장
@@ -555,9 +555,9 @@ source backend/migrations/001_initial_schema.sql;
 
 3. **컬러셋 선택**: `/color-preview` 페이지에서 원하는 컬러셋 선택 후 적용
 
-4. **게임 편집 페이지**: `/edit/[id]` 구현 (가장 중요한 미완성 기능)
+4. **컨텐츠 편집 페이지**: `/edit/[id]` 구현 (가장 중요한 미완성 기능)
 
-5. **테스트**: 실제 게임 생성 → 문제 추가 → 플레이 테스트
+5. **테스트**: 실제 컨텐츠 생성 → 문제 추가 → 플레이 테스트
 
 ---
 

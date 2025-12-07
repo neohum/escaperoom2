@@ -1,5 +1,5 @@
 -- 화면(Scene) 기능 추가
--- 각 게임에 여러 화면을 추가하고 이미지와 텍스트를 포함할 수 있음
+-- 각 컨텐츠에 여러 화면을 추가하고 이미지와 텍스트를 포함할 수 있음
 
 -- Scenes 테이블
 CREATE TABLE IF NOT EXISTS scenes (

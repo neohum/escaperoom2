@@ -129,7 +129,7 @@ export default function RoomDetailPage() {
           setFeedback(null);
           setShowHint(false);
         } else {
-          alert('게임 완료!');
+          alert('컨텐츠 완료!');
           router.push('/rooms');
         }
       }, 2000);
@@ -154,7 +154,7 @@ export default function RoomDetailPage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-md">
           <h2 className="text-2xl font-bold text-red-600 mb-4">오류</h2>
-          <p className="text-gray-700 mb-4">{error || '게임을 찾을 수 없습니다'}</p>
+          <p className="text-gray-700 mb-4">{error || '컨텐츠을 찾을 수 없습니다'}</p>
           <Link href="/rooms" className="text-indigo-600 hover:text-indigo-800">
             ← 목록으로 돌아가기
           </Link>
@@ -252,7 +252,7 @@ export default function RoomDetailPage() {
               onClick={startGame}
               className="bg-indigo-600 text-white px-8 py-4 rounded-lg hover:bg-indigo-700 font-bold text-lg"
             >
-              게임 시작하기
+              컨텐츠 시작하기
             </button>
           </div>
         )}

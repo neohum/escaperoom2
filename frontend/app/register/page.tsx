@@ -206,7 +206,7 @@ export default function RegisterPage() {
             <p className="text-center text-gray-600 mb-8">계정 유형을 선택해주세요</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* 게임참여자 */}
+              {/* 컨텐츠참여자 */}
               <button
                 onClick={() => {
                   setSelectedRole('user');
@@ -215,13 +215,13 @@ export default function RegisterPage() {
                 className="group bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-indigo-200 rounded-xl p-6 hover:border-indigo-500 hover:shadow-lg transition-all duration-200"
               >
                 <div className="text-5xl mb-4">🎮</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">게임참여자</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">컨텐츠참여자</h3>
                 <p className="text-gray-600 text-sm mb-4">
-                  방탕출 게임을 플레이하고<br />
+                  방탕출 컨텐츠을 플레이하고<br />
                   학습 경험을 즐기세요
                 </p>
                 <ul className="text-left text-sm text-gray-500 space-y-1">
-                  <li>✓ 게임 플레이</li>
+                  <li>✓ 컨텐츠 플레이</li>
                   <li>✓ 배지 획득</li>
                   <li>✓ 순위 경쟁</li>
                   <li>✓ 무료 이용</li>
@@ -242,11 +242,11 @@ export default function RegisterPage() {
                 <div className="text-5xl mb-4">🎨</div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">컨텐츠 생산자</h3>
                 <p className="text-gray-600 text-sm mb-4">
-                  교육용 방탕출 게임을<br />
+                  교육용 방탕출 컨텐츠을<br />
                   만들고 공유하세요
                 </p>
                 <ul className="text-left text-sm text-gray-500 space-y-1">
-                  <li>✓ 게임 제작</li>
+                  <li>✓ 컨텐츠 제작</li>
                   <li>✓ 팀 협업</li>
                   <li>✓ 통계 분석</li>
                 </ul>
@@ -280,7 +280,7 @@ export default function RegisterPage() {
             {selectedRole === 'user' ? (
               <>
                 <span className="text-2xl">🎮</span>
-                <span className="font-semibold text-indigo-600">게임참여자</span>
+                <span className="font-semibold text-indigo-600">컨텐츠참여자</span>
               </>
             ) : (
               <>

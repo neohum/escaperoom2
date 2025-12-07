@@ -61,7 +61,7 @@ export default function Home() {
             </div>
             <nav className="flex gap-6 items-center">
               <Link href="/rooms" className="text-gray-700 hover:text-indigo-600 font-medium">
-                공개된 게임 목록
+                공개된 컨텐츠 목록
               </Link>
               {user ? (
                 <>
@@ -73,10 +73,10 @@ export default function Home() {
                   {user.role === 'creator' && (
                     <>
                       <Link href="/my-games" className="text-gray-700 hover:text-indigo-600 font-medium">
-                        내 게임
+                        내 컨텐츠
                       </Link>
                       <Link href="/create" className="text-gray-700 hover:text-indigo-600 font-medium">
-                        게임 만들기
+                        컨텐츠 만들기
                       </Link>
                     </>
                   )}
@@ -125,19 +125,19 @@ export default function Home() {
             <p className="text-center text-gray-600 mb-8">계정 유형을 선택해주세요</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* 게임참여자 */}
+              {/* 컨텐츠참여자 */}
               <button
                 onClick={() => handleRoleSelect('user')}
                 className="group bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-indigo-200 rounded-xl p-6 hover:border-indigo-500 hover:shadow-lg transition-all duration-200"
               >
                 <div className="text-5xl mb-4">🎮</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">게임참여자</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">컨텐츠참여자</h3>
                 <p className="text-gray-600 text-sm mb-4">
-                  방탈출 게임을 플레이하고<br />
+                  방탈출 컨텐츠을 플레이하고<br />
                   학습 경험을 즐기세요
                 </p>
                 <ul className="text-left text-sm text-gray-500 space-y-1">
-                  <li>✓ 게임 플레이</li>
+                  <li>✓ 컨텐츠 플레이</li>
                   <li>✓ 배지 획득</li>
                   <li>✓ 순위 경쟁</li>
                   <li>✓ 무료 이용</li>
@@ -155,11 +155,11 @@ export default function Home() {
                 <div className="text-5xl mb-4">🎨</div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">컨텐츠 생산자</h3>
                 <p className="text-gray-600 text-sm mb-4">
-                  교육용 방탈출 게임을<br />
+                  교육용 방탈출 컨텐츠을<br />
                   만들고 공유하세요
                 </p>
                 <ul className="text-left text-sm text-gray-500 space-y-1">
-                  <li>✓ 게임 제작</li>
+                  <li>✓ 컨텐츠 제작</li>
                   <li>✓ 팀 협업</li>
                   <li>✓ 통계 분석</li>
                 </ul>
@@ -185,12 +185,12 @@ export default function Home() {
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-          교육용 방탈출 게임을
+          교육용 방탈출 컨텐츠을
           <br />
           <span className="text-indigo-600">쉽고 빠르게 만들어보세요</span>
         </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-          코딩 없이 드래그 앤 드롭으로 교육용 방탈출 게임을 만들 수 있습니다.
+          코딩 없이 드래그 앤 드롭으로 교육용 방탈출 컨텐츠을 만들 수 있습니다.
           <br />
           학생들에게 재미있는 학습 경험을 선물하세요!
         </p>
@@ -199,14 +199,14 @@ export default function Home() {
             href="/rooms"
             className="bg-indigo-600 text-white px-8 py-4 rounded-lg hover:bg-indigo-700 font-bold text-lg shadow-lg"
           >
-            게임 둘러보기
+            컨텐츠 둘러보기
           </Link>
           {(!user || user.role === 'creator') && (
             <Link
               href={user ? "/create" : "/register?role=creator"}
               className="bg-white text-indigo-600 px-8 py-4 rounded-lg hover:bg-gray-50 font-bold text-lg shadow-lg border-2 border-indigo-600"
             >
-              게임 만들기
+              컨텐츠 만들기
             </Link>
           )}
         </div>
@@ -221,7 +221,7 @@ export default function Home() {
             <div className="text-4xl mb-4">🎨</div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">쉬운 제작</h3>
             <p className="text-gray-600">
-              코딩 없이 직관적인 인터페이스로 누구나 쉽게 방탕출 게임을 만들 수 있습니다.
+              코딩 없이 직관적인 인터페이스로 누구나 쉽게 방탕출 컨텐츠을 만들 수 있습니다.
             </p>
           </div>
 
@@ -230,7 +230,7 @@ export default function Home() {
             <div className="text-4xl mb-4">🤝</div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">실시간 협업</h3>
             <p className="text-gray-600">
-              여러 명이 동시에 게임을 제작하고 편집할 수 있습니다. 팀 프로젝트에 최적화되어 있습니다.
+              여러 명이 동시에 컨텐츠을 제작하고 편집할 수 있습니다. 팀 프로젝트에 최적화되어 있습니다.
             </p>
           </div>
 
@@ -257,7 +257,7 @@ export default function Home() {
             <div className="text-4xl mb-4">📱</div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">다양한 플레이 모드</h3>
             <p className="text-gray-600">
-              온라인, 현장(QR/GPS), 인쇄물(PDF) 등 다양한 방식으로 게임을 즐길 수 있습니다.
+              온라인, 현장(QR/GPS), 인쇄물(PDF) 등 다양한 방식으로 컨텐츠을 즐길 수 있습니다.
             </p>
           </div>
 
@@ -266,7 +266,7 @@ export default function Home() {
             <div className="text-4xl mb-4">💰</div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">무료 사용</h3>
             <p className="text-gray-600">
-              무제한 게임 제작! 학생들은 무료로 플레이할 수 있습니다.
+              무제한 컨텐츠 제작! 학생들은 무료로 플레이할 수 있습니다.
             </p>
           </div>
         </div>
@@ -278,7 +278,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
             <div>
               <div className="text-4xl font-bold mb-2">무제한</div>
-              <div className="text-indigo-200">게임 제작 개수</div>
+              <div className="text-indigo-200">컨텐츠 제작 개수</div>
             </div>
             <div>
               <div className="text-4xl font-bold mb-2">100% 무료</div>
@@ -297,14 +297,14 @@ export default function Home() {
               1
             </div>
             <h3 className="text-lg font-bold text-gray-900 mb-2">역할 선택 & 가입</h3>
-            <p className="text-gray-600">게임참여자 또는 컨텐츠 생산자를 선택하고 가입하세요.</p>
+            <p className="text-gray-600">컨텐츠참여자 또는 컨텐츠 생산자를 선택하고 가입하세요.</p>
           </div>
 
           <div className="text-center">
             <div className="bg-indigo-100 text-indigo-600 w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
               2
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">게임 제작</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">컨텐츠 제작</h3>
             <p className="text-gray-600">문제를 추가하고 힌트와 이미지를 설정합니다.</p>
           </div>
 
@@ -321,7 +321,7 @@ export default function Home() {
               4
             </div>
             <h3 className="text-lg font-bold text-gray-900 mb-2">플레이</h3>
-            <p className="text-gray-600">학생들이 게임을 즐기고 학습합니다!</p>
+            <p className="text-gray-600">학생들이 컨텐츠을 즐기고 학습합니다!</p>
           </div>
         </div>
       </section>
@@ -333,7 +333,7 @@ export default function Home() {
             지금 바로 시작해보세요!
           </h2>
           <p className="text-xl mb-8 text-indigo-100">
-            첫 게임을 만드는 데 5분이면 충분합니다.
+            첫 컨텐츠을 만드는 데 5분이면 충분합니다.
           </p>
           <Link
             href="/register"
@@ -351,7 +351,7 @@ export default function Home() {
             <div>
               <h3 className="text-white text-lg font-bold mb-4">방탈출 교육 플랫폼</h3>
               <p className="text-sm">
-                교육용 방탈출 게임을 쉽고 빠르게 만들 수 있는 플랫폼입니다.
+                교육용 방탈출 컨텐츠을 쉽고 빠르게 만들 수 있는 플랫폼입니다.
               </p>
             </div>
             <div>
@@ -359,7 +359,7 @@ export default function Home() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link href="/rooms" className="hover:text-white">
-                    공개된 게임 목록
+                    공개된 컨텐츠 목록
                   </Link>
                 </li>
                 {(!user || user.role === 'creator') && (
@@ -367,13 +367,13 @@ export default function Home() {
                     {user && (
                       <li>
                         <Link href="/my-games" className="hover:text-white">
-                          내 게임
+                          내 컨텐츠
                         </Link>
                       </li>
                     )}
                     <li>
                       <Link href={user ? "/create" : "/register?role=creator"} className="hover:text-white">
-                        게임 만들기
+                        컨텐츠 만들기
                       </Link>
                     </li>
                   </>

@@ -188,7 +188,7 @@ function PreviewHomePage({ scheme }: { scheme: ColorScheme }) {
               🎯 방탈출 교육 플랫폼
             </div>
             <nav className="flex gap-6 items-center">
-              <span className="text-gray-700 font-medium">게임 목록</span>
+              <span className="text-gray-700 font-medium">컨텐츠 목록</span>
               <span className="text-gray-700 font-medium">로그인</span>
               <button
                 className="px-4 py-2 rounded-lg text-white font-semibold"
@@ -204,25 +204,25 @@ function PreviewHomePage({ scheme }: { scheme: ColorScheme }) {
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-          교육용 방탈출 게임을
+          교육용 방탈출 컨텐츠을
           <br />
           <span style={{ color: scheme.primary }}>쉽고 빠르게 만들어보세요</span>
         </h1>
         <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
-          코딩 없이 드래그 앤 드롭으로 교육용 방탈출 게임을 만들 수 있습니다.
+          코딩 없이 드래그 앤 드롭으로 교육용 방탈출 컨텐츠을 만들 수 있습니다.
         </p>
         <div className="flex gap-4 justify-center">
           <button
             className="px-6 py-3 rounded-lg font-bold text-white shadow-lg"
             style={{ backgroundColor: scheme.primary }}
           >
-            게임 둘러보기
+            컨텐츠 둘러보기
           </button>
           <button
             className="px-6 py-3 rounded-lg font-bold border-2 shadow-lg bg-white"
             style={{ borderColor: scheme.primary, color: scheme.primary }}
           >
-            게임 만들기
+            컨텐츠 만들기
           </button>
         </div>
       </section>
@@ -251,7 +251,7 @@ function PreviewHomePage({ scheme }: { scheme: ColorScheme }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
             <div>
               <div className="text-3xl font-bold mb-2">무제한</div>
-              <div className="text-white/80">게임 제작 개수</div>
+              <div className="text-white/80">컨텐츠 제작 개수</div>
             </div>
             <div>
               <div className="text-3xl font-bold mb-2">100% 무료</div>

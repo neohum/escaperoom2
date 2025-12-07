@@ -98,9 +98,9 @@ const QUESTION_TYPES: QuestionType[] = [
   },
   {
     value: 'mini_game',
-    label: '미니 게임',
+    label: '미니 컨텐츠',
     icon: '🎮',
-    description: '간단한 게임 형태의 문제',
+    description: '간단한 컨텐츠 형태의 문제',
     example: '카드 뒤집기, 숨은그림찾기 등',
   },
 ];
@@ -162,7 +162,7 @@ export default function QuestionEditPage() {
 
     const user = JSON.parse(userData);
     if (user.role !== 'creator') {
-      setError('게임 제작자만 접근할 수 있습니다');
+      setError('컨텐츠 제작자만 접근할 수 있습니다');
       router.push('/');
       return;
     }
@@ -404,7 +404,7 @@ export default function QuestionEditPage() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href={`/edit/${roomId}`} className="text-2xl font-bold text-indigo-600">
-            ← 게임 편집으로 돌아가기
+            ← 컨텐츠 편집으로 돌아가기
           </Link>
         </div>
       </header>

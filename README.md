@@ -1,6 +1,6 @@
 # 🎯 방탕출 교육 플랫폼
 
-교육용 방탕출 게임을 제작하고 플레이할 수 있는 웹 기반 플랫폼입니다.
+교육용 방탕출 컨텐츠을 제작하고 플레이할 수 있는 웹 기반 플랫폼입니다.
 
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)

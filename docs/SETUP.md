@@ -162,15 +162,15 @@ npm run dev:backend
 - [ ] 인증 시스템 (JWT + OAuth)
 - [ ] Room CRUD API
 - [ ] Question CRUD API
-- [ ] 게임 세션 관리
+- [ ] 컨텐츠 세션 관리
 - [ ] 파일 업로드 (SVG 변환)
 - [ ] 유사도 계산 로직
 - [ ] PDF 생성
 
 ### Frontend 구현
 - [ ] 관리자 대시보드
-- [ ] 게임 편집기
-- [ ] 게임 플레이어
+- [ ] 컨텐츠 편집기
+- [ ] 컨텐츠 플레이어
 - [ ] PWA 설정
 - [ ] 오프라인 지원
 

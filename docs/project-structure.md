@@ -7,7 +7,7 @@ escaperoom/
 ├── frontend/                   # Next.js 프론트엔드
 │   ├── app/                    # Next.js App Router
 │   │   ├── (admin)/           # 관리자 영역
-│   │   ├── (game)/            # 게임 영역
+│   │   ├── (game)/            # 컨텐츠 영역
 │   │   ├── (auth)/            # 인증 영역
 │   │   └── api/               # API 프록시 (백엔드 호출)
 │   ├── components/            # React 컴포넌트

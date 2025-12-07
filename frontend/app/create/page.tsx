@@ -28,11 +28,37 @@ export default function CreateRoomPage() {
       children: [{ text: '' }],
     },
   ]);
+  const [authorContent, setAuthorContent] = useState<ParagraphElement[]>([
+    {
+      type: 'paragraph',
+      children: [{ text: '' }],
+    },
+  ]);
+  const [sponsorContent, setSponsorContent] = useState<ParagraphElement[]>([
+    {
+      type: 'paragraph',
+      children: [{ text: '' }],
+    },
+  ]);
   const safeSetIntroContent = (val: any) => {
     if (!Array.isArray(val) || val.length === 0) {
       setIntroContent([{ type: 'paragraph', children: [{ text: '' }] }]);
     } else {
       setIntroContent(val as ParagraphElement[]);
+    }
+  };
+  const safeSetAuthorContent = (val: any) => {
+    if (!Array.isArray(val) || val.length === 0) {
+      setAuthorContent([{ type: 'paragraph', children: [{ text: '' }] }]);
+    } else {
+      setAuthorContent(val as ParagraphElement[]);
+    }
+  };
+  const safeSetSponsorContent = (val: any) => {
+    if (!Array.isArray(val) || val.length === 0) {
+      setSponsorContent([{ type: 'paragraph', children: [{ text: '' }] }]);
+    } else {
+      setSponsorContent(val as ParagraphElement[]);
     }
   };
   const [loading, setLoading] = useState(false);
@@ -55,7 +81,7 @@ export default function CreateRoomPage() {
     setUser(userObj);
     
     if (userObj.role !== 'creator') {
-      setError('게임 제작자만 접근할 수 있습니다');
+      setError('컨텐츠 제작자만 접근할 수 있습니다');
       router.push('/');
       return;
     }
@@ -158,7 +184,7 @@ export default function CreateRoomPage() {
       // 2. 에디터 내용의 이미지들 처리
       const processedIntroContent = await processIntroContentImages(introContent);
 
-      // 3. 게임 생성
+      // 3. 컨텐츠 생성
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/rooms`, {
         method: 'POST',
         headers: {
@@ -169,6 +195,8 @@ export default function CreateRoomPage() {
           ...formData,
           intro_image: uploadedImageUrl,
           intro_content: JSON.stringify(processedIntroContent),
+          author: JSON.stringify(authorContent),
+          sponsor: JSON.stringify(sponsorContent),
         }),
       });
 
@@ -176,6 +204,31 @@ export default function CreateRoomPage() {
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create room');
+      }
+
+      // 4. 첫 번째 scene (시작 페이지) 생성
+      const sceneResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/scenes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          room_id: data.room.id,
+          title: '',
+          description: '컨텐츠 시작 페이지',
+          background_image: uploadedImageUrl,
+          background_color: '#ffffff',
+          content: JSON.stringify(processedIntroContent),
+          layout_type: 'image_text',
+          transition_type: 'fade',
+          auto_advance: false,
+          auto_advance_delay: 0
+        }),
+      });
+
+      if (!sceneResponse.ok) {
+        console.warn('Failed to create intro scene, but room was created');
       }
 
       // Redirect to edit page
@@ -219,13 +272,13 @@ export default function CreateRoomPage() {
                   href="/my-games"
                   className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
                 >
-                  📋 내 게임
+                  📋 내 컨텐츠
                 </Link>
                 <Link
                   href="/rooms"
                   className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
                 >
-                  🎮 게임 목록
+                  🎮 컨텐츠 목록
                 </Link>
                 <button
                   className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium"
@@ -247,7 +300,7 @@ export default function CreateRoomPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">새 게임 만들기</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-8">새 컨텐츠 만들기</h1>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -259,7 +312,7 @@ export default function CreateRoomPage() {
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-8 space-y-6">
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-              게임 제목 *
+              컨텐츠 제목 *
             </label>
             <input
               id="title"
@@ -284,7 +337,7 @@ export default function CreateRoomPage() {
               onChange={handleChange}
               rows={4}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 font-bold placeholder-gray-400"
-              placeholder="게임에 대한 설명을 입력하세요"
+              placeholder="컨텐츠에 대한 설명을 입력하세요"
             />
           </div>
 
@@ -418,8 +471,45 @@ export default function CreateRoomPage() {
                     ? introContent
                     : [{ type: 'paragraph', children: [{ text: '' }] }]}
                   onChange={safeSetIntroContent}
-                  placeholder="게임 소개, 규칙, 배경 등 자유롭게 입력하세요. (굵게, 색상, 이미지, 링크 등 지원)"
+                  placeholder="컨텐츠 소개, 규칙, 배경 등 자유롭게 입력하세요. (굵게, 색상, 이미지, 링크 등 지원)"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* 제작자와 후원자 정보 */}
+          <div className="mt-8">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">제작 및 후원 정보</h2>
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
+                  제작자 정보
+                </label>
+                <div className="bg-white border border-gray-300 rounded-lg">
+                  <SlateEditor
+                    value={Array.isArray(authorContent) && authorContent.length > 0 && authorContent.some(e => e && e.type && Array.isArray(e.children))
+                      ? authorContent
+                      : [{ type: 'paragraph', children: [{ text: '' }] }]}
+                    onChange={safeSetAuthorContent}
+                    placeholder="제작자 이름, 역할 등 (예: 김철수 - 기획/개발)"
+                    height="100px"
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="sponsor" className="block text-sm font-medium text-gray-700 mb-2">
+                  후원자 정보
+                </label>
+                <div className="bg-white border border-gray-300 rounded-lg">
+                  <SlateEditor
+                    value={Array.isArray(sponsorContent) && sponsorContent.length > 0 && sponsorContent.some(e => e && e.type && Array.isArray(e.children))
+                      ? sponsorContent
+                      : [{ type: 'paragraph', children: [{ text: '' }] }]}
+                    onChange={safeSetSponsorContent}
+                    placeholder="후원자 이름, 기관 등 (예: ABC 교육청 - 후원)"
+                    height="100px"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -430,7 +520,7 @@ export default function CreateRoomPage() {
               disabled={loading}
               className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 font-semibold disabled:opacity-50"
             >
-              {loading ? '생성 중...' : '게임 생성'}
+              {loading ? '생성 중...' : '컨텐츠 생성'}
             </button>
             <Link
               href="/my-games"

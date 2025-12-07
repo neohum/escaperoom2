@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 interface Room {
   id: string;
@@ -27,12 +28,6 @@ export default function MyGamesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
-  const [deleteModal, setDeleteModal] = useState<{ show: boolean; roomId: string; roomTitle: string }>({
-    show: false,
-    roomId: '',
-    roomTitle: ''
-  });
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   useEffect(() => {
     // Check if user is creator
@@ -55,24 +50,35 @@ export default function MyGamesPage() {
   const fetchMyRooms = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('Token from localStorage:', token);
+
       if (!token) {
+        console.log('No token found, redirecting to login');
         router.push('/login');
         return;
       }
 
+      console.log('Making API call to:', `${process.env.NEXT_PUBLIC_API_URL}/api/rooms/my/rooms`);
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/rooms/my/rooms`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
+      console.log('API response status:', response.status);
+      console.log('API response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
+        const errorData = await response.text();
+        console.log('API error response:', errorData);
         throw new Error('Failed to fetch rooms');
       }
 
       const data = await response.json();
+      console.log('API success response:', data);
       setRooms(data.rooms || []);
     } catch (err: any) {
+      console.error('fetchMyRooms error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -105,45 +111,59 @@ export default function MyGamesPage() {
     }
   };
 
-  const handleDeleteClick = (roomId: string, roomTitle: string) => {
-    setDeleteModal({ show: true, roomId, roomTitle });
-    setDeleteConfirmText('');
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (deleteConfirmText !== '삭제') {
-      alert('삭제를 확인하려면 "삭제"를 정확히 입력해주세요.');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/rooms/${deleteModal.roomId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+  const handleDeleteClick = async (roomId: string, roomTitle: string) => {
+    const result = await Swal.fire({
+      title: '컨텐츠 삭제',
+      text: `"${roomTitle}" 컨텐츠을 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다. 삭제를 원하시면 "삭제"를 입력하세요.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: '삭제',
+      cancelButtonText: '취소',
+      input: 'text',
+      inputPlaceholder: '삭제를 확인하려면 "삭제"를 입력하세요',
+      inputValidator: (value) => {
+        if (!value || value !== '삭제') {
+          return '삭제를 확인하려면 "삭제"를 정확히 입력해주세요.';
         }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to delete room');
       }
+    });
 
-      alert('게임이 삭제되었습니다.');
-      setDeleteModal({ show: false, roomId: '', roomTitle: '' });
-      setDeleteConfirmText('');
-      fetchMyRooms();
-    } catch (err: any) {
-      alert(`삭제 실패: ${err.message}`);
+    if (result.isConfirmed) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/rooms/${roomId}`,
+          {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to delete room');
+        }
+
+        await Swal.fire({
+          title: '삭제 완료',
+          text: '컨텐츠이 성공적으로 삭제되었습니다.',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+
+        fetchMyRooms();
+      } catch (err: any) {
+        await Swal.fire({
+          title: '삭제 실패',
+          text: `삭제 중 오류가 발생했습니다: ${err.message}`,
+          icon: 'error'
+        });
+      }
     }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeleteModal({ show: false, roomId: '', roomTitle: '' });
-    setDeleteConfirmText('');
   };
 
   const formatDate = (dateString: string) => {
@@ -179,7 +199,7 @@ export default function MyGamesPage() {
                 href="/create"
                 className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
               >
-                새 게임 만들기
+                새 컨텐츠 만들기
               </Link>
               <span className="text-gray-600">안녕하세요, {user?.username}님</span>
             </div>
@@ -198,17 +218,17 @@ export default function MyGamesPage() {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm text-gray-600 mb-1">전체 게임</div>
+            <div className="text-sm text-gray-600 mb-1">전체 컨텐츠</div>
             <div className="text-3xl font-bold text-indigo-600">{rooms.length}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm text-gray-600 mb-1">공개된 게임</div>
+            <div className="text-sm text-gray-600 mb-1">공개된 컨텐츠</div>
             <div className="text-3xl font-bold text-green-600">
               {rooms.filter((r) => r.is_published).length}
             </div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm text-gray-600 mb-1">비공개 게임</div>
+            <div className="text-sm text-gray-600 mb-1">비공개 컨텐츠</div>
             <div className="text-3xl font-bold text-gray-600">
               {rooms.filter((r) => !r.is_published).length}
             </div>
@@ -219,13 +239,13 @@ export default function MyGamesPage() {
         {rooms.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <div className="text-6xl mb-4">🎮</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">아직 게임이 없습니다</h3>
-            <p className="text-gray-600 mb-6">첫 번째 방탕출 게임을 만들어보세요!</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">아직 컨텐츠이 없습니다</h3>
+            <p className="text-gray-600 mb-6">첫 번째 방탕출 컨텐츠을 만들어보세요!</p>
             <Link
               href="/create"
               className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700"
             >
-              게임 만들기
+              컨텐츠 만들기
             </Link>
           </div>
         ) : (
@@ -234,7 +254,7 @@ export default function MyGamesPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    게임 정보
+                    컨텐츠 정보
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     문제 수
@@ -316,65 +336,6 @@ export default function MyGamesPage() {
         )}
       </main>
 
-      {/* 삭제 확인 모달 */}
-      {deleteModal.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-            <div className="mb-6">
-              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">게임 삭제</h2>
-              <p className="text-gray-600 text-center text-sm mb-4">
-                이 작업은 되돌릴 수 없습니다
-              </p>
-            </div>
-
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-800 mb-2">
-                <strong>"{deleteModal.roomTitle}"</strong> 게임과 관련된 모든 데이터가 영구적으로 삭제됩니다:
-              </p>
-              <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
-                <li>모든 게임 화면</li>
-                <li>등록된 모든 문제</li>
-                <li>게임 설정 및 메타데이터</li>
-              </ul>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                삭제를 확인하려면 <strong className="text-red-600">"삭제"</strong>를 입력하세요
-              </label>
-              <input
-                type="text"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                placeholder="삭제"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                autoFocus
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleDeleteCancel}
-                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleDeleteConfirm}
-                disabled={deleteConfirmText !== '삭제'}
-                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                삭제하기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
